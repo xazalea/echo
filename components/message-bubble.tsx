@@ -25,7 +25,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
-  const isClipped = message.clippedBy.length > 0
+  const isClipped = (message.clippedBy?.length ?? 0) > 0
 
   const handleSaveEdit = () => {
     if (editContent.trim() && editContent !== message.content) {
@@ -65,11 +65,11 @@ export function MessageBubble({
         <div className={`flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
           <UserHoverCard 
             username={message.username}
-            userId={message.userId}
+            userId={message.userId || message.user_id || ''}
             isOwn={isOwn}
           />
           <span className="text-xs text-muted-foreground">
-            {formatTimestamp(message.timestamp)}
+            {message.timestamp ? formatTimestamp(message.timestamp) : message.created_at ? formatTimestamp(new Date(message.created_at)) : ''}
           </span>
           {message.isEdited && (
             <span className="text-xs text-muted-foreground">{'(edited)'}</span>
@@ -134,7 +134,7 @@ export function MessageBubble({
               {isClipped && (
                 <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                   <BookmarkCheck className="h-3 w-3" />
-                  <span>{message.clippedBy.length} {message.clippedBy.length === 1 ? 'clip' : 'clips'}</span>
+                  <span>{(message.clippedBy?.length ?? 0)} {(message.clippedBy?.length ?? 0) === 1 ? 'clip' : 'clips'}</span>
                 </div>
               )}
             </>

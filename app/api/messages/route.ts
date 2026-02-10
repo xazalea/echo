@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createMessage, getMessages, updateMessage, deleteMessage, getRoom } from '@/lib/d1-client'
-import { D1Database, Ai } from '@/lib/types' // Assuming these types are declared in a separate file
+import { createMessage, getMessages, updateMessage, deleteMessage, getRoom, D1Database } from '@/lib/d1-client'
+import { Ai } from '@cloudflare/workers-types'
 
 export const runtime = 'edge'
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Room code is required' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode)
+    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode)
+    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }

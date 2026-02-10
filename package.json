@@ -5,17 +5,18 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
+    "build:cf": "next build && npx @cloudflare/next-on-pages",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "clean": "rm -rf .next out",
+    "clean": "rm -rf .next out .vercel",
     "notify": "node notification-server/server.js",
     "db:migrate": "wrangler d1 execute echo-db --file=./scripts/setup-d1-database.sql",
     "db:shell": "wrangler d1 execute echo-db",
-    "deploy:cloudflare": "next build && wrangler pages deploy .next",
-    "cf:dev": "wrangler pages dev .next --compatibility-date=2024-01-01",
-    "cf:deploy": "pnpm build && wrangler pages deploy .next"
+    "deploy:cloudflare": "pnpm build:cf && wrangler pages deploy .vercel/output/static",
+    "cf:dev": "pnpm build:cf && wrangler pages dev .vercel/output/static --compatibility-date=2024-01-01",
+    "cf:deploy": "pnpm build:cf && wrangler pages deploy .vercel/output/static"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260210.0",
@@ -64,6 +65,7 @@
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
+    "sharp": "^0.34.5",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -71,6 +73,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^22",
     "@types/react": "19.2.7",

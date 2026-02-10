@@ -1,12 +1,16 @@
 export interface Message {
   id: string
-  userId: string
+  userId?: string // For compatibility
+  user_id?: string // From API
   username: string
   content: string
-  timestamp: Date
+  timestamp?: Date
+  created_at?: number // From API
   imageUrl?: string
+  type?: string
   isEdited?: boolean
-  clippedBy: string[] // Array of user IDs who clipped this
+  edited_at?: number
+  clippedBy?: string[] // Array of user IDs who clipped this
 }
 
 export interface User {

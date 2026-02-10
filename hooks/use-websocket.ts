@@ -25,7 +25,7 @@ export function useWebSocket({
 }: UseWebSocketProps) {
   const [connected, setConnected] = useState(false)
   const ws = useRef<WebSocket | null>(null)
-  const reconnectTimeout = useRef<NodeJS.Timeout>()
+  const reconnectTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
   
   const connect = useCallback(() => {
     // In production, this would connect to your WebSocket server

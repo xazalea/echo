@@ -59,7 +59,7 @@ export function ChatInterface({
     if (messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0) {
       const newMessage = messages[messages.length - 1]
       
-      if (document.hidden && newMessage.user_id !== userId) {
+      if (document.hidden && (newMessage.user_id || newMessage.userId) !== userId) {
         showNotification(
           `${newMessage.username} in ${roomCode}`,
           newMessage.type === 'text' ? newMessage.content : `Sent a ${newMessage.type}`,

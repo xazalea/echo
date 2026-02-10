@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Room code is required' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode)
+    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     }

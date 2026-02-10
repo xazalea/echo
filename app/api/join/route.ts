@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode)
+    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
     if (!room) {
       return NextResponse.json({ error: 'Room not found or expired' }, { status: 404 })
     }

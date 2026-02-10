@@ -23,7 +23,7 @@ export function ChatInput({ onSend, onTyping, disabled }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const [showGifPicker, setShowGifPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     // Auto-focus textarea

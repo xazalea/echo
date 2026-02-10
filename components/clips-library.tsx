@@ -63,7 +63,7 @@ export function ClipsLibrary() {
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {formatTimestamp(clip.timestamp)}
+                      {clip.timestamp ? formatTimestamp(clip.timestamp) : ''}
                     </span>
                   </div>
 
@@ -84,7 +84,7 @@ export function ClipsLibrary() {
                   <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{'Room: '}{clip.roomCode}</span>
                     <span>{'•'}</span>
-                    <span>{'Clipped '}{formatTimestamp(clip.clippedAt)}</span>
+                    <span>{'Clipped '}{clip.clippedAt ? formatTimestamp(clip.clippedAt) : ''}</span>
                   </div>
 
                   {/* Actions */}

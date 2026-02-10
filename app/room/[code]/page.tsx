@@ -1,5 +1,8 @@
 'use client'
 
+// Edge runtime configuration for Cloudflare Pages
+export const runtime = 'edge'
+
 import { useEffect, useState, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatInterface } from '@/components/chat-interface'
