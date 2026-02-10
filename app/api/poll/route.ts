@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMessages, getTypingUsers, getRoomUsers, getRoom } from '@/lib/d1-client'
+import { getMessages, getTypingUsers, getRoomUsers, getRoom, createRoom } from '@/lib/d1-client'
 import { D1Database } from '@cloudflare/workers-types'
 
 export const runtime = 'edge'
@@ -25,9 +25,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Room code is required' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
+    let room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
+    
+    // Auto-create room if it doesn't exist
     if (!room) {
-      return NextResponse.json({ error: 'Room not found' }, { status: 404 })
+      room = await createRoom(db, roomCode, userId || 'system') as { id: string; code: string; created_at: number; expires_at: number }
     }
 
     // Get new messages since lastMessageId

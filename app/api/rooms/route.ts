@@ -17,6 +17,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
     }
 
+    // If custom code provided, check if it already exists
+    if (code) {
+      const existingRoom = await getRoom(db, code) as { id: string; code: string; created_at: number; expires_at: number } | null
+      if (existingRoom) {
+        return NextResponse.json({
+          success: true,
+          room: existingRoom,
+        })
+      }
+    }
+
     const room = await createRoom(db, code, createdBy)
 
     return NextResponse.json({

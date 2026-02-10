@@ -6,40 +6,90 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
+import { VantaBackground } from '@/components/vanta-background'
 
 export default function Home() {
   const router = useRouter()
   const [roomCode, setRoomCode] = useState('')
+  const [customRoomCode, setCustomRoomCode] = useState('')
   const [username, setUsername] = useState('')
   const [mode, setMode] = useState<'home' | 'join' | 'create'>('home')
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (!roomCode.trim() || !username.trim()) return
     
     const userId = generateUserId()
     localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
-    router.push(`/room/${roomCode.toUpperCase()}`)
+    
+    // Verify room exists and join
+    try {
+      const response = await fetch(`/api/rooms?code=${roomCode.toUpperCase()}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        // Join the room
+        await fetch('/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomCode: roomCode.toUpperCase(),
+            userId,
+            username,
+          }),
+        })
+        
+        router.push(`/room/${roomCode.toUpperCase()}`)
+      } else {
+        alert(data.error || 'Room not found')
+      }
+    } catch (error) {
+      console.error('Error joining room:', error)
+      // Still navigate - room might be created on first message
+      router.push(`/room/${roomCode.toUpperCase()}`)
+    }
   }
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!username.trim()) return
     
-    const newRoomCode = generateRoomCode()
     const userId = generateUserId()
     localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
-    router.push(`/room/${newRoomCode}`)
+    
+    // Create room on server
+    try {
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: roomCode.trim().toUpperCase() || undefined,
+          createdBy: userId,
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push(`/room/${data.room.code}`)
+      } else {
+        alert(data.error || 'Failed to create room')
+      }
+    } catch (error) {
+      console.error('Error creating room:', error)
+      alert('Failed to create room. Please try again.')
+    }
   }
 
   if (mode === 'home') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-8">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <VantaBackground />
+        <div className="relative z-10 w-full max-w-md space-y-8">
           {/* Logo */}
-          <div className="text-center">
-            <h1 className="font-light text-6xl tracking-tight text-foreground">
+          <div className="text-center space-y-3">
+            <h1 className="font-light text-7xl tracking-tight text-foreground">
               echo<span className="text-muted-foreground">.</span>
             </h1>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground/80">
               {'Anonymous ephemeral messaging'}
             </p>
           </div>
@@ -48,22 +98,22 @@ export default function Home() {
           <div className="space-y-3">
             <Button
               onClick={() => setMode('create')}
-              className="h-12 w-full border border-border bg-card text-foreground transition-colors hover:border-foreground hover:bg-accent"
+              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md"
               variant="ghost"
             >
-              {'Create Room'}
+              <span className="font-medium">{'Create Room'}</span>
             </Button>
             <Button
               onClick={() => setMode('join')}
-              className="h-12 w-full border border-border bg-card text-foreground transition-colors hover:border-foreground hover:bg-accent"
+              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md"
               variant="ghost"
             >
-              {'Join Room'}
+              <span className="font-medium">{'Join Room'}</span>
             </Button>
           </div>
 
           {/* Footer */}
-          <div className="pt-8 text-center text-xs text-muted-foreground">
+          <div className="pt-8 text-center text-xs text-muted-foreground/70">
             {'All messages expire after 1 hour'}
           </div>
         </div>
@@ -73,12 +123,13 @@ export default function Home() {
 
   if (mode === 'join') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-8">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <VantaBackground />
+        <div className="relative z-10 w-full max-w-md space-y-8">
           <div className="text-center">
             <button
               onClick={() => setMode('home')}
-              className="mb-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-6 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {'← Back'}
             </button>
@@ -89,21 +140,21 @@ export default function Home() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="room-code" className="text-sm text-muted-foreground">
+              <Label htmlFor="room-code" className="text-sm font-medium text-foreground">
                 {'Room Code'}
               </Label>
               <Input
                 id="room-code"
-                placeholder="Enter 6-digit code"
+                placeholder="Enter room code"
                 value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                maxLength={6}
-                className="h-12 border-border bg-card text-center text-lg font-mono uppercase tracking-widest text-foreground"
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                maxLength={20}
+                className="h-12 rounded-xl border-border/50 bg-card text-center text-lg font-mono uppercase tracking-widest text-foreground shadow-sm focus:border-foreground/50"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm text-muted-foreground">
+              <Label htmlFor="username" className="text-sm font-medium text-foreground">
                 {'Username'}
               </Label>
               <Input
@@ -112,16 +163,16 @@ export default function Home() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 maxLength={20}
-                className="h-12 border-border bg-card text-foreground"
+                className="h-12 rounded-xl border-border/50 bg-card text-foreground shadow-sm focus:border-foreground/50"
               />
             </div>
 
             <Button
               onClick={handleJoinRoom}
-              disabled={!roomCode.trim() || !username.trim() || roomCode.length !== 6}
-              className="h-12 w-full bg-foreground text-background transition-colors hover:bg-foreground/90 disabled:opacity-30"
+              disabled={!roomCode.trim() || !username.trim()}
+              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30"
             >
-              {'Join Room'}
+              <span className="font-medium">{'Join Room'}</span>
             </Button>
           </div>
         </div>
@@ -131,12 +182,13 @@ export default function Home() {
 
   if (mode === 'create') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-8">
+      <div className="relative flex min-h-screen items-center justify-center p-4">
+        <VantaBackground />
+        <div className="relative z-10 w-full max-w-md space-y-8">
           <div className="text-center">
             <button
               onClick={() => setMode('home')}
-              className="mb-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-6 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {'← Back'}
             </button>
@@ -147,7 +199,7 @@ export default function Home() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username-create" className="text-sm text-muted-foreground">
+              <Label htmlFor="username-create" className="text-sm font-medium text-foreground">
                 {'Username'}
               </Label>
               <Input
@@ -156,21 +208,38 @@ export default function Home() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 maxLength={20}
-                className="h-12 border-border bg-card text-foreground"
+                className="h-12 rounded-xl border-border/50 bg-card text-foreground shadow-sm focus:border-foreground/50"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="room-code-create" className="text-sm font-medium text-foreground">
+                {'Room Code (Optional)'}
+              </Label>
+              <Input
+                id="room-code-create"
+                placeholder="Enter custom code or leave blank"
+                value={customRoomCode}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+                  setCustomRoomCode(value)
+                  setRoomCode(value)
+                }}
+                maxLength={20}
+                className="h-12 rounded-xl border-border/50 bg-card text-center text-lg font-mono uppercase tracking-widest text-foreground shadow-sm focus:border-foreground/50"
+              />
+              <p className="text-xs text-muted-foreground/70">
+                {'Leave blank to generate a random code'}
+              </p>
             </div>
 
             <Button
               onClick={handleCreateRoom}
               disabled={!username.trim()}
-              className="h-12 w-full bg-foreground text-background transition-colors hover:bg-foreground/90 disabled:opacity-30"
+              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30"
             >
-              {'Create Room'}
+              <span className="font-medium">{'Create Room'}</span>
             </Button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              {'A unique room code will be generated'}
-            </p>
           </div>
         </div>
       </div>

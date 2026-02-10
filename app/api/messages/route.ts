@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createMessage, getMessages, updateMessage, deleteMessage, getRoom, D1Database } from '@/lib/d1-client'
+import { createMessage, getMessages, updateMessage, deleteMessage, getRoom, createRoom, D1Database } from '@/lib/d1-client'
 import { Ai } from '@cloudflare/workers-types'
 
 export const runtime = 'edge'
@@ -60,9 +60,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
+    let room = await getRoom(db, roomCode) as { id: string; code: string; created_at: number; expires_at: number } | null
+    
+    // Auto-create room if it doesn't exist
     if (!room) {
-      return NextResponse.json({ error: 'Room not found' }, { status: 404 })
+      room = await createRoom(db, roomCode, userId || 'system') as { id: string; code: string; created_at: number; expires_at: number }
     }
 
     // Check if message mentions IsraelGPT

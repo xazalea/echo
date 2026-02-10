@@ -22,11 +22,12 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
     messages: [],
     typingUsers: [],
     onlineUsers: [],
-    isConnected: false,
+    isConnected: true, // Start as connected, only set to false on actual errors
   })
   const [isLoading, setIsLoading] = useState(true)
   const lastMessageIdRef = useRef<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const retryCountRef = useRef(0)
 
   const poll = async () => {
     try {
@@ -40,9 +41,15 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
       }
 
       const response = await fetch(`/api/poll?${params}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
 
       if (data.success) {
+        retryCountRef.current = 0 // Reset retry count on success
         setState((prev) => {
           // Update last message ID
           if (data.messages.length > 0) {
@@ -68,10 +75,20 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
           }
         })
         setIsLoading(false)
+      } else {
+        // If room not found, still allow connection but show error
+        if (data.error?.includes('not found')) {
+          setState((prev) => ({ ...prev, isConnected: false }))
+        }
       }
     } catch (error) {
       console.error('[v0] Polling error:', error)
-      setState((prev) => ({ ...prev, isConnected: false }))
+      retryCountRef.current += 1
+      
+      // Only mark as disconnected after multiple failures
+      if (retryCountRef.current >= 3) {
+        setState((prev) => ({ ...prev, isConnected: false }))
+      }
     }
   }
 

@@ -11,6 +11,11 @@ export interface Message {
   isEdited?: boolean
   edited_at?: number
   clippedBy?: string[] // Array of user IDs who clipped this
+  replyTo?: string // Message ID this is replying to
+  replyToContent?: string // Preview of replied message
+  reactions?: Record<string, string[]> // { emoji: [userId1, userId2] }
+  readBy?: string[] // Array of user IDs who read this
+  deliveryStatus?: 'sending' | 'sent' | 'delivered' | 'read' // Delivery status
 }
 
 export interface User {

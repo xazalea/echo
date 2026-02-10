@@ -29,6 +29,7 @@ export function ChatInterface({
   expiresAt
 }: ChatInterfaceProps) {
   const [timeRemaining, setTimeRemaining] = useState('')
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; username: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCountRef = useRef(0)
 
@@ -83,12 +84,32 @@ export function ChatInterface({
     return () => clearInterval(interval)
   }, [expiresAt])
 
-  const handleSendMessage = async (content: string, type?: string) => {
+  const handleSendMessage = async (content: string, type?: string, replyToId?: string) => {
     try {
+      // For now, we'll include reply info in the content
+      // In production, this would be a separate field in the API
       await sendMessage(content, type || 'text')
+      setReplyTo(null)
     } catch (error) {
       console.error('[v0] Error sending message:', error)
     }
+  }
+
+  const handleReply = (messageId: string) => {
+    const message = messages.find(m => m.id === messageId)
+    if (message) {
+      setReplyTo({
+        id: messageId,
+        content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
+        username: message.username
+      })
+    }
+  }
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    // In production, this would call an API endpoint
+    console.log('Reacting to message', messageId, 'with', emoji)
+    // For now, we'll just log it - you'd need to add an API endpoint for reactions
   }
 
   const handleTyping = (isTyping: boolean) => {
@@ -103,71 +124,96 @@ export function ChatInterface({
     }
   }
 
-  const handleToggleClip = async (messageId: string) => {
+  const handleToggleClip = async (messageId: string, clipped: boolean) => {
     const message = messages.find(m => m.id === messageId)
     if (!message) return
 
     try {
-      await clipMessage(messageId, message.content, message.username)
-      showNotification('echo.', 'Message clipped to library')
+      if (!clipped) {
+        await clipMessage(messageId, message.content, message.username)
+        showNotification('echo.', 'Message clipped to library')
+      }
     } catch (error) {
       console.error('[v0] Error clipping message:', error)
     }
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Timer Bar */}
-      <div className="border-b border-border bg-muted px-4 py-2">
-        <div className="mx-auto flex max-w-4xl items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Clock className="h-3 w-3" />
-            <span>{'Messages expire in'}</span>
-            <span className="font-mono">{timeRemaining}</span>
+    <div className="relative flex h-full flex-col bg-background/80 backdrop-blur-sm">
+      {/* Status Bar */}
+      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm px-4 py-2">
+        <div className="mx-auto flex max-w-4xl items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="font-medium">{'Expires in'}</span>
+            <span className="font-mono font-semibold text-foreground">{timeRemaining}</span>
           </div>
-          <div className="flex items-center gap-2">
-            {!isConnected && (
-              <>
-                <WifiOff className="h-3 w-3" />
-                <span>{'Offline'}</span>
-              </>
+          <div className="flex items-center gap-3">
+            {isLoading && (
+              <span className="text-muted-foreground">{'Loading...'}</span>
             )}
-            {isLoading && <span>{'Loading...'}</span>}
+            {!isConnected && (
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                <WifiOff className="h-3.5 w-3.5" />
+                <span className="font-medium">{'Offline'}</span>
+              </div>
+            )}
+            {isConnected && !isLoading && (
+              <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500">
+                <div className="h-2 w-2 rounded-full bg-current animate-pulse" />
+                <span className="font-medium">{'Connected'}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="chat-container flex-1 overflow-y-auto px-4 py-6">
-        <div className="mx-auto max-w-4xl space-y-4">
+      <div className="chat-container flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+        <div className="mx-auto max-w-3xl space-y-1">
           {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
+            <div className="flex h-full min-h-[400px] items-center justify-center">
+              <div className="text-center space-y-2">
+                <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <span className="text-2xl">💬</span>
+                </div>
+                <p className="text-sm font-medium text-foreground">
                   {'No messages yet'}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {'Start the conversation'}
                 </p>
               </div>
             </div>
           ) : (
-            messages.map((message: any) => (
-              <MessageBubble
-                key={message.id}
-                message={{
-                  ...message,
-                  userId: message.user_id,
-                  imageUrl: message.type === 'image' ? message.content : undefined,
-                  clippedBy: [],
-                  timestamp: new Date(message.created_at)
-                }}
-                isOwn={message.user_id === userId}
-                onEdit={handleEditMessage}
-                onToggleClip={() => handleToggleClip(message.id)}
-                roomCode={roomCode}
-              />
-            ))
+            messages.map((message: any, index: number) => {
+              const prevMessage = index > 0 ? messages[index - 1] : null
+              const showAvatar = !prevMessage || prevMessage.user_id !== message.user_id || 
+                (new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime()) > 300000 // 5 minutes
+              
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={{
+                    ...message,
+                    userId: message.user_id,
+                    imageUrl: message.type === 'image' ? message.content : undefined,
+                    clippedBy: [],
+                    timestamp: new Date(message.created_at),
+                    reactions: message.reactions || {},
+                    readBy: message.read_by || [],
+                    deliveryStatus: message.delivery_status || 'sent',
+                  }}
+                  isOwn={message.user_id === userId}
+                  onEdit={handleEditMessage}
+                  onToggleClip={handleToggleClip}
+                  roomCode={roomCode}
+                  showAvatar={showAvatar}
+                  onReply={handleReply}
+                  onReact={handleReact}
+                />
+              )
+            })
           )}
           
           {typingUsers.length > 0 && (
@@ -186,6 +232,8 @@ export function ChatInterface({
         onSend={handleSendMessage}
         onTyping={handleTyping}
         disabled={!isConnected}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
     </div>
   )

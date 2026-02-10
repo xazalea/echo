@@ -11,6 +11,7 @@ import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Users, LogOut, Copy, Check } from 'lucide-react'
+import { VantaBackground } from '@/components/vanta-background'
 
 interface PageProps {
   params: Promise<{
@@ -78,16 +79,18 @@ export default function RoomPage({ params }: PageProps) {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">{'Loading...'}</div>
+      <div className="relative flex min-h-screen items-center justify-center">
+        <VantaBackground />
+        <div className="relative z-10 text-muted-foreground">{'Loading...'}</div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="relative flex h-screen flex-col">
+      <VantaBackground />
       {/* Header */}
-      <header className="border-b border-border bg-card px-4 py-3">
+      <header className="relative z-10 border-b border-border/50 bg-card/50 backdrop-blur-sm px-4 py-3 shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="font-light text-2xl tracking-tight text-foreground">
@@ -96,13 +99,13 @@ export default function RoomPage({ params }: PageProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleCopyCode}
-                className="flex items-center gap-2 rounded border border-border bg-muted px-3 py-1.5 font-mono text-sm transition-colors hover:border-foreground"
+                className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/50 px-3 py-1.5 font-mono text-sm transition-all hover:border-foreground/50 hover:bg-muted shadow-sm"
               >
-                <span>{resolvedParams.code}</span>
+                <span className="font-semibold">{resolvedParams.code}</span>
                 {copied ? (
-                  <Check className="h-3 w-3" />
+                  <Check className="h-3.5 w-3.5 text-green-600" />
                 ) : (
-                  <Copy className="h-3 w-3" />
+                  <Copy className="h-3.5 w-3.5" />
                 )}
               </button>
             </div>
@@ -113,25 +116,25 @@ export default function RoomPage({ params }: PageProps) {
               onClick={() => setShowUsers(!showUsers)}
               variant="ghost"
               size="sm"
-              className="gap-2 border border-border bg-transparent text-foreground hover:border-foreground hover:bg-accent"
+              className="gap-2 border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all"
             >
               <Users className="h-4 w-4" />
-              <span>{users.length}</span>
+              <span className="font-medium">{users.length}</span>
             </Button>
             <Button
               onClick={() => setShowClips(!showClips)}
               variant="ghost"
               size="sm"
-              className="gap-2 border border-border bg-transparent text-foreground hover:border-foreground hover:bg-accent"
+              className="gap-2 border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all"
             >
               <Bookmark className="h-4 w-4" />
-              <span>{'Clips'}</span>
+              <span className="font-medium">{'Clips'}</span>
             </Button>
             <Button
               onClick={handleLeaveRoom}
               variant="ghost"
               size="sm"
-              className="gap-2 border border-border bg-transparent text-foreground hover:border-foreground hover:bg-accent"
+              className="gap-2 border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -140,7 +143,7 @@ export default function RoomPage({ params }: PageProps) {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative z-10 flex flex-1 overflow-hidden">
         {/* Chat Interface */}
         <div className="flex-1">
           <ChatInterface
