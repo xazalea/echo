@@ -1,15 +1,29 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import React from "react"
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 
 import './globals.css'
 
-const _geist = Geist({ subsets: ['latin'] })
-const _geistMono = Geist_Mono({ subsets: ['latin'] })
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'echo. - Anonymous P2P Chat',
+  description: 'Privacy-focused ephemeral messaging platform with code-based rooms',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#0a0a0a',
+  userScalable: true,
 }
 
 export default function RootLayout({
@@ -18,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="en" className="dark">
+      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
     </html>
   )
 }
