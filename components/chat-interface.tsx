@@ -4,10 +4,10 @@ import { useState, useRef, useEffect } from 'react'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
 import { TypingIndicator } from './typing-indicator'
-import { useWebSocket } from '@/hooks/use-websocket'
-import type { Message, User, TypingIndicator as TypingIndicatorType } from '@/lib/types'
+import { usePolling } from '@/hooks/use-polling'
+import type { Message, User } from '@/lib/types'
 import { getTimeRemaining, showNotification } from '@/lib/chat-utils'
-import { Clock } from 'lucide-react'
+import { Clock, WifiOff } from 'lucide-react'
 
 interface ChatInterfaceProps {
   roomCode: string
@@ -23,62 +23,56 @@ export function ChatInterface({
   roomCode,
   userId,
   username,
-  messages,
+  messages: _messages,
   setMessages,
-  users,
+  users: _users,
   expiresAt
 }: ChatInterfaceProps) {
-  const [typingUsers, setTypingUsers] = useState<TypingIndicatorType[]>([])
   const [timeRemaining, setTimeRemaining] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCountRef = useRef(0)
 
-  const { connected, sendMessage, sendTyping, editMessage, toggleClip } = useWebSocket({
+  const { 
+    messages, 
+    typingUsers,
+    onlineUsers,
+    isConnected, 
+    isLoading,
+    sendMessage, 
+    updateTyping, 
+    editMessage: editMsg, 
+    clipMessage 
+  } = usePolling({
     roomCode,
     userId,
-    username,
-    onMessage: (message) => {
-      setMessages([...messages, message])
+    enabled: true,
+    interval: 2000
+  })
+
+  // Update parent messages state
+  useEffect(() => {
+    setMessages(messages)
+  }, [messages, setMessages])
+
+  // Show notifications for new messages
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0) {
+      const newMessage = messages[messages.length - 1]
       
-      // Show notification for new messages from others when tab is hidden
-      if (document.hidden && message.userId !== userId) {
+      if (document.hidden && newMessage.user_id !== userId) {
         showNotification(
-          `${message.username} in echo.`,
-          message.content,
+          `${newMessage.username} in ${roomCode}`,
+          newMessage.type === 'text' ? newMessage.content : `Sent a ${newMessage.type}`,
         )
       }
-    },
-    onUserJoined: (user) => {
-      showNotification('echo.', `${user.username} joined the room`)
-    },
-    onUserLeft: (userIdLeft) => {
-      const leftUser = users.find(u => u.id === userIdLeft)
-      if (leftUser) {
-        showNotification('echo.', `${leftUser.username} left the room`)
-      }
-    },
-    onTyping: (typing) => {
-      if (typing.userId === userId) return
-      
-      setTypingUsers(prev => {
-        const filtered = prev.filter(t => t.userId !== typing.userId)
-        return [...filtered, typing]
-      })
-      
-      // Remove typing indicator after 3 seconds
-      setTimeout(() => {
-        setTypingUsers(prev => prev.filter(t => t.userId !== typing.userId))
-      }, 3000)
     }
-  })
+    prevMessageCountRef.current = messages.length
+  }, [messages, userId, roomCode])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > prevMessageCountRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-    prevMessageCountRef.current = messages.length
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
 
   // Update time remaining
   useEffect(() => {
@@ -89,44 +83,57 @@ export function ChatInterface({
     return () => clearInterval(interval)
   }, [expiresAt])
 
-  const handleSendMessage = (content: string, imageUrl?: string) => {
-    sendMessage(content, imageUrl)
+  const handleSendMessage = async (content: string, type?: string) => {
+    try {
+      await sendMessage(content, type || 'text')
+    } catch (error) {
+      console.error('[v0] Error sending message:', error)
+    }
   }
 
   const handleTyping = (isTyping: boolean) => {
-    sendTyping(isTyping)
+    updateTyping(isTyping)
   }
 
-  const handleEditMessage = (messageId: string, newContent: string) => {
-    editMessage(messageId, newContent)
-    setMessages(messages.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, content: newContent, isEdited: true }
-        : msg
-    ))
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    try {
+      await editMsg(messageId, newContent)
+    } catch (error) {
+      console.error('[v0] Error editing message:', error)
+    }
   }
 
-  const handleToggleClip = (messageId: string, clipped: boolean) => {
-    toggleClip(messageId, clipped)
-    setMessages(messages.map(msg => {
-      if (msg.id === messageId) {
-        const clippedBy = clipped 
-          ? [...msg.clippedBy, userId]
-          : msg.clippedBy.filter(id => id !== userId)
-        return { ...msg, clippedBy }
-      }
-      return msg
-    }))
+  const handleToggleClip = async (messageId: string) => {
+    const message = messages.find(m => m.id === messageId)
+    if (!message) return
+
+    try {
+      await clipMessage(messageId, message.content, message.username)
+      showNotification('echo.', 'Message clipped to library')
+    } catch (error) {
+      console.error('[v0] Error clipping message:', error)
+    }
   }
 
   return (
     <div className="flex h-full flex-col">
       {/* Timer Bar */}
       <div className="border-b border-border bg-muted px-4 py-2">
-        <div className="mx-auto flex max-w-4xl items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span>{'Messages expire in'}</span>
-          <span className="font-mono">{timeRemaining}</span>
+        <div className="mx-auto flex max-w-4xl items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Clock className="h-3 w-3" />
+            <span>{'Messages expire in'}</span>
+            <span className="font-mono">{timeRemaining}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isConnected && (
+              <>
+                <WifiOff className="h-3 w-3" />
+                <span>{'Offline'}</span>
+              </>
+            )}
+            {isLoading && <span>{'Loading...'}</span>}
+          </div>
         </div>
       </div>
 
@@ -145,20 +152,29 @@ export function ChatInterface({
               </div>
             </div>
           ) : (
-            messages.map((message) => (
+            messages.map((message: any) => (
               <MessageBubble
                 key={message.id}
-                message={message}
-                isOwn={message.userId === userId}
+                message={{
+                  ...message,
+                  userId: message.user_id,
+                  imageUrl: message.type === 'image' ? message.content : undefined,
+                  clippedBy: [],
+                  timestamp: new Date(message.created_at)
+                }}
+                isOwn={message.user_id === userId}
                 onEdit={handleEditMessage}
-                onToggleClip={handleToggleClip}
+                onToggleClip={() => handleToggleClip(message.id)}
                 roomCode={roomCode}
               />
             ))
           )}
           
           {typingUsers.length > 0 && (
-            <TypingIndicator users={typingUsers} />
+            <TypingIndicator users={typingUsers.map((u: any) => ({ 
+              userId: u.user_id, 
+              username: u.username 
+            }))} />
           )}
           
           <div ref={messagesEndRef} />
@@ -169,7 +185,7 @@ export function ChatInterface({
       <ChatInput
         onSend={handleSendMessage}
         onTyping={handleTyping}
-        disabled={!connected}
+        disabled={!isConnected}
       />
     </div>
   )

@@ -1,0 +1,29 @@
+name = "echo-chat"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+node_compat = true
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "echo-db"
+database_id = "your-d1-database-id" # Replace with your actual D1 database ID
+
+# Workers AI binding
+[ai]
+binding = "AI"
+
+# Environment variables
+[vars]
+GIPHY_API_KEY = "6zzmXysXbC6FVLIrBCIeQUTEjtl9DNN5"
+MESSAGE_EXPIRY_HOURS = "1"
+ROOM_EXPIRY_HOURS = "24"
+
+# Cron trigger for cleanup
+[triggers]
+crons = ["*/10 * * * *"] # Run cleanup every 10 minutes
+
+# KV namespace for rate limiting (optional)
+[[kv_namespaces]]
+binding = "RATE_LIMITER"
+id = "your-kv-namespace-id" # Replace with your actual KV namespace ID
