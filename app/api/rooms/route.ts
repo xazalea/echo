@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRoom, getRoom } from '@/lib/d1-client'
 import { D1Database } from '@cloudflare/workers-types'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
@@ -11,7 +12,10 @@ interface CloudflareEnv {
 export async function POST(request: NextRequest) {
   try {
     const { code, createdBy } = await request.json()
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -47,7 +51,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })

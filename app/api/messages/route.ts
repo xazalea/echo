@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMessage, getMessages, updateMessage, deleteMessage, getRoom, createRoom, D1Database } from '@/lib/d1-client'
 import { Ai } from '@cloudflare/workers-types'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
@@ -15,7 +16,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const roomCode = searchParams.get('roomCode')
     const limit = Number.parseInt(searchParams.get('limit') || '100')
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -49,8 +53,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { roomCode, userId, username, content, type = 'text' } = await request.json()
-    const db = (request as any).env?.DB
-    const ai = (request as any).env?.AI
+    
+    // Access database and AI from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
+    const ai = ctx?.env?.AI || (request as any).env?.AI
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -125,7 +132,10 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { messageId, content } = await request.json()
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -155,7 +165,10 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const messageId = searchParams.get('messageId')
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })

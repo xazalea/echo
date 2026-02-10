@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMessages, getTypingUsers, getRoomUsers, getRoom, createRoom } from '@/lib/d1-client'
 import { D1Database } from '@cloudflare/workers-types'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
@@ -15,7 +16,10 @@ export async function GET(request: NextRequest) {
     const roomCode = searchParams.get('roomCode')
     const lastMessageId = searchParams.get('lastMessageId')
     const userId = searchParams.get('userId')
-    const db = (request as any).env?.DB
+    
+    // Access database from Cloudflare Pages context
+    const ctx = getRequestContext()
+    const db = ctx?.env?.DB || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
