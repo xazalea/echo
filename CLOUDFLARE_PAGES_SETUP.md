@@ -8,16 +8,16 @@ The `nodejs_compat` compatibility flag and bindings **MUST** be configured in th
 
 ### 1. Set Compatibility Flags (REQUIRED)
 
-1. Go to https://dash.cloudflare.com/
-2. Navigate to **Workers & Pages** → **Pages**
-3. Click on your project: `echo-98z` or `echo-chat`
-4. Go to **Settings** → **Compatibility Flags**
-5. Under **Compatibility Flags**, add:
-   - `nodejs_compat`
-6. **IMPORTANT**: Set this for **BOTH**:
-   - Production environment
-   - Preview environment
-7. Click **Save**
+⚠️ **IMPORTANT**: The `@cloudflare/next-on-pages` adapter automatically manages compatibility flags. 
+
+**DO NOT manually add `nodejs_compat` in the dashboard** - this causes conflicts!
+
+If you see an error about conflicting flags:
+1. Go to **Settings** → **Compatibility Flags**
+2. **Remove** any `nodejs_compat` flags you added manually
+3. **Remove** any `nodejs_compat_populate_process_env` or `nodejs_compat_do_not_populate_process_env` flags
+4. Let the adapter handle compatibility flags automatically
+5. Redeploy: `pnpm cf:deploy`
 
 ### 2. Configure Bindings
 
@@ -64,7 +64,19 @@ After configuration, your site should work at:
 ## Troubleshooting
 
 ### Error: "no nodejs_compat compatibility flag set"
-- **Solution**: Go to Settings → Compatibility Flags and add `nodejs_compat` to both Production and Preview environments
+- **Solution**: The adapter should handle this automatically. If you see this error:
+  1. Go to Settings → Compatibility Flags
+  2. **Remove** any manually added `nodejs_compat` flags
+  3. **Remove** any `nodejs_compat_populate_process_env` or `nodejs_compat_do_not_populate_process_env` flags
+  4. Redeploy: `pnpm cf:deploy`
+  5. The adapter will automatically configure the correct flags
+
+### Error: "Compatibility flags are mutually contradictory: nodejs_compat_populate_process_env vs nodejs_compat_do_not_populate_process_env"
+- **Solution**: 
+  1. Go to Settings → Compatibility Flags
+  2. **Remove ALL** compatibility flags (including `nodejs_compat`)
+  3. Let the adapter handle compatibility flags automatically
+  4. Redeploy: `pnpm cf:deploy`
 
 ### Error: 404 Not Found
 - **Solution**: Make sure all bindings (DB, AI) are configured in Settings → Functions → Bindings

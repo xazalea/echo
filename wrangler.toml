@@ -1,6 +1,8 @@
 name = "echo-chat"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
+# Note: Do NOT set compatibility_flags here or in dashboard
+# The @cloudflare/next-on-pages adapter manages compatibility flags automatically
+# Setting them manually causes conflicts (nodejs_compat_populate_process_env vs nodejs_compat_do_not_populate_process_env)
 
 # D1 Database binding
 [[d1_databases]]
