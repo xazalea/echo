@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.DB || (request as any).env?.DB
+    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     
     // Access database and AI from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.DB || (request as any).env?.DB
+    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
     const ai = ctx?.env?.AI || (request as any).env?.AI
 
     if (!db) {
@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.DB || (request as any).env?.DB
+    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -168,7 +168,7 @@ export async function DELETE(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.DB || (request as any).env?.DB
+    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
