@@ -189,7 +189,8 @@ export function ChatInterface({
             messages.map((message: any, index: number) => {
               const prevMessage = index > 0 ? messages[index - 1] : null
               const showAvatar = !prevMessage || prevMessage.user_id !== message.user_id || 
-                (new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime()) > 300000 // 5 minutes
+                (message.created_at && prevMessage.created_at && 
+                 (new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime()) > 300000) // 5 minutes
               
               return (
                 <MessageBubble
