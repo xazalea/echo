@@ -6,7 +6,8 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 interface CloudflareEnv {
-  DB: D1Database
+  DB?: D1Database
+  echo?: D1Database
 }
 
 // Long polling endpoint for real-time updates

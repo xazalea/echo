@@ -6,8 +6,9 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 interface CloudflareEnv {
-  DB: D1Database
-  AI: Ai
+  DB?: D1Database
+  echo?: D1Database
+  AI?: Ai
 }
 
 // Get messages for a room
