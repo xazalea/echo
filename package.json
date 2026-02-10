@@ -15,7 +15,7 @@
     "db:migrate": "wrangler d1 execute echo-db --file=./scripts/setup-d1-database.sql",
     "db:shell": "wrangler d1 execute echo-db",
     "deploy:cloudflare": "pnpm build:cf && wrangler pages deploy .vercel/output/static",
-    "cf:dev": "pnpm build:cf && wrangler pages dev .vercel/output/static --compatibility-date=2024-01-01",
+    "cf:dev": "pnpm build:cf && wrangler pages dev .vercel/output/static --compatibility-date=2024-01-01 --compatibility-flags=nodejs_compat",
     "cf:deploy": "pnpm build:cf && wrangler pages deploy .vercel/output/static"
   },
   "dependencies": {
