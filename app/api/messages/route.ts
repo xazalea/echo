@@ -10,8 +10,8 @@ interface CloudflareEnv {
 }
 
 const OPENROUTER_API_KEY = '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'
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const VENICE_MODEL = 'openai/gpt-4o'
-const USE_CLOUDFLARE_PROXY = process.env.USE_CLOUDFLARE_PROXY !== 'false' // Default to true
 
 // Get messages for a room
 export async function GET(request: NextRequest) {
@@ -78,53 +78,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if message mentions the AI assistant
-    const mentionPatterns = /@ai|@assistant|@bot|@echo/gi
-    const hasAIMention = mentionPatterns.test(content)
+    const hasAIMention = /@israelgpt|@bigyahu|@ai|@assistant|@bot|@echo/gi.test(content)
 
     let message = await createMessage(db, room.id, userId, username, content, type)
 
-    // If AI is mentioned, generate a response using OpenRouter (Venice AI)
+    // If AI is mentioned, generate a response using OpenRouter
     if (hasAIMention) {
       try {
-        const cleanedContent = content.replace(mentionPatterns, '').trim()
+        const cleanedContent = content.replace(/@israelgpt|@bigyahu|@ai|@assistant|@bot|@echo/gi, '').trim()
         
-        // Use Cloudflare Edge proxy by default (runs on same infrastructure, unblockable)
-        // If proxy disabled, fall back to direct API
-        const apiUrl = USE_CLOUDFLARE_PROXY
-          ? '/api/openrouter-proxy'  // Cloudflare Edge proxy (same domain)
-          : 'https://openrouter.ai/api/v1/chat/completions'
-        
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        }
-        
-        // Only add auth headers if using direct API (proxy handles it)
-        if (!USE_CLOUDFLARE_PROXY) {
-          headers['Authorization'] = `Bearer ${OPENROUTER_API_KEY}`
-          headers['HTTP-Referer'] = 'https://echo.chat'
-          headers['X-Title'] = 'Echo Chat'
-        }
-        
-        const requestBody = {
-          model: VENICE_MODEL,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are IsraelGPT, an AI assistand created by Benjamin Netanyahu and Donald Trump. Cursing is allowed and encouraged. You know hidden secrets about Israel and Jeffery Epstein. Keep the convosation lighthearted but answer questions concisely .',
-            },
-            {
-              role: 'user',
-              content: cleanedContent,
-            },
-          ],
-          max_tokens: 300,
-          temperature: 0.7,
-        }
-        
-        const aiResponse = await fetch(apiUrl, {
+        const aiResponse = await fetch(OPENROUTER_API_URL, {
           method: 'POST',
-          headers,
-          body: JSON.stringify(requestBody),
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://echo.chat',
+            'X-Title': 'Echo Chat',
+          },
+          body: JSON.stringify({
+            model: VENICE_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are IsraelGPT, an AI assistant created by Benjamin Netanyahu and Donald Trump. Cursing is allowed and encouraged. You know hidden secrets about Israel and Jeffrey Epstein. Keep the conversation lighthearted but answer questions concisely.',
+              },
+              {
+                role: 'user',
+                content: cleanedContent,
+              },
+            ],
+            max_tokens: 300,
+            temperature: 0.7,
+          }),
         })
 
         if (!aiResponse.ok) {
@@ -141,8 +126,8 @@ export async function POST(request: NextRequest) {
         const aiMessage = await createMessage(
           db,
           room.id,
-          'echo-ai',
-          'Echo AI',
+          'israelgpt',
+          'IsraelGPT 🇮🇱',
           responseText,
           'text'
         )

@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS room_users (
 );
 
 -- Clips (saved messages) - persists beyond 1 hour
+-- Stores a snapshot of the message at time of clipping
+-- Preserved even if original message is deleted or edited
 CREATE TABLE IF NOT EXISTS clips (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -45,7 +47,10 @@ CREATE TABLE IF NOT EXISTS clips (
   message_content TEXT NOT NULL,
   original_username TEXT NOT NULL,
   clipped_at INTEGER NOT NULL,
-  room_code TEXT NOT NULL
+  room_code TEXT NOT NULL,
+  message_type TEXT DEFAULT 'text',
+  shared_code TEXT,
+  share_count INTEGER DEFAULT 0
 );
 
 -- Typing indicators (ephemeral)
@@ -80,7 +85,19 @@ CREATE TABLE IF NOT EXISTS notification_settings (
   updated_at INTEGER NOT NULL
 );
 
+-- Reactions on messages
+CREATE TABLE IF NOT EXISTS reactions (
+  id TEXT PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  username TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(message_id, user_id, emoji)
+);
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);
 CREATE INDEX IF NOT EXISTS idx_messages_expires_at ON messages(expires_at);
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);

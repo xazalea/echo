@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Message, User } from '@/lib/types'
 
 interface PollingState {
@@ -22,14 +22,14 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
     messages: [],
     typingUsers: [],
     onlineUsers: [],
-    isConnected: true, // Start as connected, only set to false on actual errors
+    isConnected: true,
   })
   const [isLoading, setIsLoading] = useState(true)
   const lastMessageIdRef = useRef<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const retryCountRef = useRef(0)
 
-  const poll = async () => {
+  const poll = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         roomCode,
@@ -55,18 +55,33 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
       }
 
       if (data.success) {
-        retryCountRef.current = 0 // Reset retry count on success
+        retryCountRef.current = 0
         setState((prev) => {
-          // Update last message ID
           if (data.messages && data.messages.length > 0) {
             lastMessageIdRef.current = data.messages[data.messages.length - 1].id
             
-            // Merge new messages with existing ones, avoiding duplicates
-            const existingIds = new Set(prev.messages.map((m) => m.id))
-            const newMessages = data.messages.filter((m: Message) => !existingIds.has(m.id))
+            // Merge new messages, update existing ones (for reactions)
+            const existingMap = new Map(prev.messages.map(m => [m.id, m]))
+            
+            for (const msg of data.messages) {
+              existingMap.set(msg.id, {
+                ...existingMap.get(msg.id),
+                ...msg,
+              })
+            }
             
             return {
-              messages: [...prev.messages, ...newMessages],
+              messages: Array.from(existingMap.values()),
+              typingUsers: data.typingUsers || [],
+              onlineUsers: data.onlineUsers || [],
+              isConnected: true,
+            }
+          }
+
+          // Update reactions on existing messages if we get a full poll
+          if (!lastMessageIdRef.current && data.messages) {
+            return {
+              ...prev,
               typingUsers: data.typingUsers || [],
               onlineUsers: data.onlineUsers || [],
               isConnected: true,
@@ -82,7 +97,6 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         })
         setIsLoading(false)
       } else {
-        // If room not found, still allow connection but show error
         if (data.error?.includes('not found')) {
           setState((prev) => ({ ...prev, isConnected: false }))
         }
@@ -91,19 +105,17 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
       console.error('[v0] Polling error:', error)
       retryCountRef.current += 1
       
-      // Only mark as disconnected after multiple failures
       if (retryCountRef.current >= 3) {
         setState((prev) => ({ ...prev, isConnected: false }))
       }
     }
-  }
+  }, [roomCode, userId])
 
   // Initial load
   useEffect(() => {
     if (!enabled) return
-
     poll()
-  }, [roomCode, userId, enabled])
+  }, [poll, enabled])
 
   // Set up polling interval
   useEffect(() => {
@@ -116,11 +128,10 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         clearInterval(pollingIntervalRef.current)
       }
     }
-  }, [roomCode, userId, enabled, interval])
+  }, [poll, enabled, interval])
 
   const sendMessage = async (content: string, type = 'text') => {
     try {
-      // Get username from global storage
       const userData = localStorage.getItem('echo_user')
       const username = userData ? JSON.parse(userData).username : 'Anonymous'
       
@@ -139,13 +150,11 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
       const data = await response.json() as { success: boolean; message?: any; aiResponse?: any }
 
       if (data.success && data.message) {
-        // Immediately add the message to state
         setState((prev) => ({
           ...prev,
           messages: [...prev.messages, data.message!],
         }))
 
-        // If there's an AI response, add it too
         if (data.aiResponse) {
           setTimeout(() => {
             setState((prev) => ({
@@ -155,10 +164,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
           }, 500)
         }
 
-        // Update last message ID
         lastMessageIdRef.current = data.message.id
-
-        // Trigger immediate poll for other users' updates
         poll()
       }
 
@@ -171,7 +177,6 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
 
   const updateTyping = async (isTyping: boolean) => {
     try {
-      // Get username from global storage
       const userData = localStorage.getItem('echo_user')
       const username = userData ? JSON.parse(userData).username : 'Anonymous'
       
@@ -204,7 +209,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         setState((prev) => ({
           ...prev,
           messages: prev.messages.map((m) =>
-            m.id === messageId ? { ...m, content, edited_at: data.message?.edited_at } : m
+            m.id === messageId ? { ...m, content, edited_at: data.message?.edited_at, isEdited: true } : m
           ),
         }))
       }
@@ -216,8 +221,56 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
     }
   }
 
+  const reactToMessage = async (messageId: string, emoji: string) => {
+    try {
+      const userData = localStorage.getItem('echo_user')
+      const username = userData ? JSON.parse(userData).username : 'Anonymous'
+
+      // Optimistic update
+      setState((prev) => ({
+        ...prev,
+        messages: prev.messages.map((m) => {
+          if (m.id !== messageId) return m
+          const reactions = { ...(m.reactions || {}) }
+          const users = reactions[emoji] ? [...reactions[emoji]] : []
+          const idx = users.indexOf(userId)
+          if (idx >= 0) {
+            users.splice(idx, 1)
+            if (users.length === 0) {
+              delete reactions[emoji]
+            } else {
+              reactions[emoji] = users
+            }
+          } else {
+            reactions[emoji] = [...users, userId]
+          }
+          return { ...m, reactions }
+        }),
+      }))
+
+      // Send to server
+      await fetch('/api/reactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId,
+          userId,
+          username,
+          emoji,
+        }),
+      })
+    } catch (error) {
+      console.error('[v0] React to message error:', error)
+      // Re-poll to get correct state
+      poll()
+    }
+  }
+
   const clipMessage = async (messageId: string, messageContent: string, originalUsername: string) => {
     try {
+      const message = state.messages.find(m => m.id === messageId)
+      const messageType = message?.type || 'text'
+      
       const response = await fetch('/api/clips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -227,6 +280,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
           messageContent,
           originalUsername,
           roomCode,
+          messageType,
         }),
       })
 
@@ -243,6 +297,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
     sendMessage,
     updateTyping,
     editMessage,
+    reactToMessage,
     clipMessage,
     refresh: poll,
   }

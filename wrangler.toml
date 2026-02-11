@@ -19,6 +19,8 @@ binding = "AI"
 GIPHY_API_KEY = "6zzmXysXbC6FVLIrBCIeQUTEjtl9DNN5"
 MESSAGE_EXPIRY_HOURS = "1"
 ROOM_EXPIRY_HOURS = "24"
+OPENROUTER_API_KEY = "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"
+VENICE_MODEL = "venice-ai"
 
 # KV namespace for rate limiting (optional)
 [[kv_namespaces]]

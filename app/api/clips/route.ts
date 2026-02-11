@@ -44,8 +44,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as { userId: string; messageId: string; messageContent: string; originalUsername: string; roomCode: string }
-    const { userId, messageId, messageContent, originalUsername, roomCode } = body
+    const body = await request.json() as { 
+      userId: string
+      messageId: string
+      messageContent: string
+      originalUsername: string
+      roomCode: string
+      messageType?: string
+    }
+    const { userId, messageId, messageContent, originalUsername, roomCode, messageType = 'text' } = body
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
@@ -59,7 +66,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const clip = await clipMessage(db, userId, messageId, messageContent, originalUsername, roomCode)
+    // Save message snapshot - preserved even if original is deleted/edited
+    const clip = await clipMessage(db, userId, messageId, messageContent, originalUsername, roomCode, messageType)
 
     return NextResponse.json({
       success: true,

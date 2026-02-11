@@ -158,23 +158,25 @@ export async function deleteMessage(db: D1Database, messageId: string) {
   return { id: messageId, deleted: true }
 }
 
-// Clip operations
+// Clip operations - saves a snapshot of the message at time of clipping
 export async function clipMessage(
   db: D1Database,
   userId: string,
   messageId: string,
   messageContent: string,
   originalUsername: string,
-  roomCode: string
+  roomCode: string,
+  messageType = 'text'
 ) {
   const id = generateId()
   const now = getTimestamp()
 
+  // Store the message snapshot - it's preserved even if original is deleted/edited
   await db
     .prepare(
-      'INSERT INTO clips (id, user_id, message_id, message_content, original_username, clipped_at, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO clips (id, user_id, message_id, message_content, original_username, clipped_at, room_code, message_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .bind(id, userId, messageId, messageContent, originalUsername, now, roomCode)
+    .bind(id, userId, messageId, messageContent, originalUsername, now, roomCode, messageType)
     .run()
 
   return { id, clipped_at: now }
@@ -187,6 +189,59 @@ export async function getClips(db: D1Database, userId: string) {
     .all()
 
   return result.results || []
+}
+
+// Reaction operations
+export async function addReaction(
+  db: D1Database,
+  messageId: string,
+  userId: string,
+  username: string,
+  emoji: string
+) {
+  const id = generateId()
+  const now = getTimestamp()
+
+  // Toggle: if reaction already exists, remove it; otherwise add it
+  const existing = await db
+    .prepare('SELECT id FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?')
+    .bind(messageId, userId, emoji)
+    .first()
+
+  if (existing) {
+    await db.prepare('DELETE FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?')
+      .bind(messageId, userId, emoji)
+      .run()
+    return { action: 'removed', messageId, emoji }
+  }
+
+  await db
+    .prepare(
+      'INSERT INTO reactions (id, message_id, user_id, username, emoji, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .bind(id, messageId, userId, username, emoji, now)
+    .run()
+
+  return { action: 'added', id, messageId, emoji, created_at: now }
+}
+
+export async function getReactionsForMessages(db: D1Database, messageIds: string[]) {
+  if (messageIds.length === 0) return {}
+
+  const placeholders = messageIds.map(() => '?').join(',')
+  const result = await db
+    .prepare(`SELECT message_id, emoji, user_id, username FROM reactions WHERE message_id IN (${placeholders})`)
+    .bind(...messageIds)
+    .all()
+
+  // Group by message_id -> emoji -> user_ids
+  const reactions: Record<string, Record<string, string[]>> = {}
+  for (const row of (result.results || []) as any[]) {
+    if (!reactions[row.message_id]) reactions[row.message_id] = {}
+    if (!reactions[row.message_id][row.emoji]) reactions[row.message_id][row.emoji] = []
+    reactions[row.message_id][row.emoji].push(row.user_id)
+  }
+  return reactions
 }
 
 // Typing indicator operations

@@ -10,7 +10,7 @@ import { ClipsLibrary } from '@/components/clips-library'
 import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
-import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon } from 'lucide-react'
+import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{
@@ -27,11 +27,10 @@ export default function RoomPage({ params }: PageProps) {
   const [showClips, setShowClips] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [expiresAt] = useState(new Date(Date.now() + 60 * 60 * 1000)) // 1 hour from now
+  const [expiresAt] = useState(new Date(Date.now() + 60 * 60 * 1000))
   const notificationPermissionRequested = useRef(false)
 
   useEffect(() => {
-    // Get user from localStorage
     const storedUser = localStorage.getItem('echo_user')
     if (!storedUser) {
       router.push('/')
@@ -41,28 +40,17 @@ export default function RoomPage({ params }: PageProps) {
     const userData = JSON.parse(storedUser)
     setUser(userData)
 
-    // Request notification permission
     if (!notificationPermissionRequested.current) {
       notificationPermissionRequested.current = true
-      requestNotificationPermission().then(granted => {
-        if (granted) {
-          console.log('[v0] Notification permission granted')
-        }
-      })
+      requestNotificationPermission()
     }
 
-    // Simulate user joining
     const newUser: User = {
       id: userData.userId,
       username: userData.username,
       isTyping: false
     }
     setUsers([newUser])
-
-    // Show notification for room joined
-    if (document.hidden) {
-      showNotification('echo.', `You joined room ${resolvedParams.code}`)
-    }
   }, [resolvedParams.code, router])
 
   const handleCopyCode = async () => {
@@ -78,78 +66,74 @@ export default function RoomPage({ params }: PageProps) {
 
   if (!user) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-background">
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.02)_0%,transparent_50%)]" />
-        <div className="relative z-10 text-muted-foreground">{'Loading...'}</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-muted-foreground/60 text-sm">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="relative flex h-screen flex-col bg-background overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-enhanced" />
-      <div className="absolute inset-0 bg-grid-pattern" />
-      <div className="absolute inset-0 bg-dots-pattern" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/80" />
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="relative z-10 border-b border-border/50 bg-card/50 backdrop-blur-sm px-4 py-3 shadow-sm">
+      <header className="border-b border-border/30 bg-card/50 backdrop-blur-md px-4 py-2.5 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="font-light text-2xl tracking-tight text-foreground">
-              echo<span className="text-muted-foreground">.</span>
+          <div className="flex items-center gap-3">
+            <h1 className="font-light text-xl tracking-tight text-foreground">
+              echo<span className="text-muted-foreground/50">.</span>
             </h1>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopyCode}
-                className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/50 px-4 py-2 font-mono text-sm transition-all hover:border-foreground/50 hover:bg-muted shadow-sm hover:shadow group"
-              >
-                <span className="font-semibold tracking-wide">{resolvedParams.code}</span>
-                {copied ? (
-                  <Check className="h-4 w-4 text-foreground" />
-                ) : (
-                  <Copy className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                )}
-              </button>
-            </div>
+            <div className="h-4 w-px bg-border/30" />
+            <button
+              onClick={handleCopyCode}
+              className="flex items-center gap-1.5 rounded-md bg-muted/20 border border-border/20 px-2.5 py-1.5 font-mono text-xs transition-all hover:border-border/40 hover:bg-muted/30 group"
+            >
+              <span className="font-semibold tracking-wider text-foreground/80">{resolvedParams.code}</span>
+              {copied ? (
+                <Check className="h-3 w-3 text-green-500" />
+              ) : (
+                <Copy className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+              )}
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowUsers(!showUsers)}
-              variant="ghost"
-              size="sm"
-              className={`gap-2 h-9 rounded-lg border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all ${showUsers ? 'bg-accent border-foreground/30' : ''}`}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { setShowUsers(!showUsers); setShowClips(false) }}
+              className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs transition-colors ${
+                showUsers 
+                  ? 'bg-muted/40 text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
+              }`}
             >
-              <Users className="h-4 w-4" />
-              <span className="font-medium text-sm">{users.length}</span>
-            </Button>
-            <Button
-              onClick={() => setShowClips(!showClips)}
-              variant="ghost"
-              size="sm"
-              className={`gap-2 h-9 rounded-lg border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all ${showClips ? 'bg-accent border-foreground/30' : ''}`}
+              <Users className="h-3.5 w-3.5" />
+              <span className="font-medium">{users.length}</span>
+            </button>
+            <button
+              onClick={() => { setShowClips(!showClips); setShowUsers(false) }}
+              className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs transition-colors ${
+                showClips 
+                  ? 'bg-muted/40 text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
+              }`}
             >
-              <Bookmark className="h-4 w-4" />
-              <span className="font-medium text-sm">{'Clips'}</span>
-            </Button>
-            <Button
+              <Bookmark className="h-3.5 w-3.5" />
+              <span className="font-medium">Clips</span>
+            </button>
+            <div className="h-4 w-px bg-border/20 mx-0.5" />
+            <button
               onClick={handleLeaveRoom}
-              variant="ghost"
-              size="sm"
-              className="gap-2 h-9 px-3 rounded-lg border border-border/50 bg-transparent text-foreground hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
             >
-              <LogOut className="h-4 w-4" />
-              <span className="font-medium text-sm">{'Leave'}</span>
-            </Button>
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="font-medium">Leave</span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="relative z-10 flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Chat Interface */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <ChatInterface
             roomCode={resolvedParams.code}
             userId={user.userId}
@@ -163,38 +147,42 @@ export default function RoomPage({ params }: PageProps) {
 
         {/* Clips Sidebar */}
         {showClips && (
-          <div className="w-80 border-l border-border bg-card">
-            <ClipsLibrary />
+          <div className="w-72 border-l border-border/30 bg-card/30 backdrop-blur-sm flex-shrink-0">
+            <ClipsLibrary onClose={() => setShowClips(false)} />
           </div>
         )}
 
         {/* Users Sidebar */}
         {showUsers && (
-          <div className="w-72 border-l border-border/50 bg-card/50 backdrop-blur-sm p-5">
-            <div className="mb-5 flex items-center gap-2">
-              <UserIcon className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">
-                {'Active Users'}
-              </h3>
-              <span className="ml-auto rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-medium text-foreground">
-                {users.length}
-              </span>
+          <div className="w-64 border-l border-border/30 bg-card/30 backdrop-blur-sm flex-shrink-0">
+            <div className="p-4 border-b border-border/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="text-xs font-semibold text-foreground">Online</h3>
+                <span className="text-[10px] text-muted-foreground/50 bg-muted/30 px-1.5 py-0.5 rounded">
+                  {users.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowUsers(false)}
+                className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <div className="space-y-2">
+            <div className="p-3 space-y-1">
               {users.map((u) => (
                 <div
                   key={u.id}
-                  className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/50 px-4 py-3 transition-all hover:border-border hover:bg-background"
+                  className="flex items-center gap-2.5 rounded-md px-3 py-2 transition-colors hover:bg-muted/20"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/50 border border-border/50 text-xs font-semibold text-foreground">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/30 border border-border/20 text-[10px] font-semibold text-foreground/70">
                     {u.username.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium text-foreground flex-1">{u.username}</span>
-                  {u.isTyping && (
-                    <span className="text-xs text-muted-foreground italic">
-                      {'typing...'}
-                    </span>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-foreground/80 block truncate">{u.username}</span>
+                  </div>
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500/60 flex-shrink-0" />
                 </div>
               ))}
             </div>

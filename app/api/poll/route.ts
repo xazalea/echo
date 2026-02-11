@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMessages, getTypingUsers, getRoomUsers, getRoom, createRoom } from '@/lib/d1-client'
+import { getMessages, getTypingUsers, getRoomUsers, getRoom, createRoom, getReactionsForMessages } from '@/lib/d1-client'
 import { D1Database } from '@cloudflare/workers-types'
 import { getRequestContext } from '@cloudflare/next-on-pages'
 
@@ -45,6 +45,23 @@ export async function GET(request: NextRequest) {
       ? messages.filter((msg: any) => msg.id > lastMessageId)
       : messages
 
+    // Get reactions for messages
+    let reactions: Record<string, Record<string, string[]>> = {}
+    try {
+      const messageIds = (newMessages as any[]).map((m: any) => m.id)
+      if (messageIds.length > 0) {
+        reactions = await getReactionsForMessages(db, messageIds)
+      }
+    } catch {
+      // Reactions table may not exist yet - gracefully degrade
+    }
+
+    // Attach reactions to messages
+    const messagesWithReactions = (newMessages as any[]).map((msg: any) => ({
+      ...msg,
+      reactions: reactions[msg.id] || {},
+    }))
+
     // Get typing indicators
     const typingUsers = await getTypingUsers(db, room.id)
     
@@ -56,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      messages: newMessages,
+      messages: messagesWithReactions,
       typingUsers: otherTyping,
       onlineUsers,
       timestamp: Date.now(),

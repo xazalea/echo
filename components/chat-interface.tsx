@@ -7,7 +7,7 @@ import { TypingIndicator } from './typing-indicator'
 import { usePolling } from '@/hooks/use-polling'
 import type { Message, User } from '@/lib/types'
 import { getTimeRemaining, showNotification } from '@/lib/chat-utils'
-import { Clock, WifiOff, MessageCircle, Wifi } from 'lucide-react'
+import { Clock, WifiOff, MessageCircle } from 'lucide-react'
 
 interface ChatInterfaceProps {
   roomCode: string
@@ -42,6 +42,7 @@ export function ChatInterface({
     sendMessage, 
     updateTyping, 
     editMessage: editMsg, 
+    reactToMessage,
     clipMessage 
   } = usePolling({
     roomCode,
@@ -55,20 +56,17 @@ export function ChatInterface({
     setMessages(messages)
   }, [messages, setMessages])
 
-  // Show notifications for new messages (works even when tab is closed via service worker)
+  // Show notifications for new messages
   useEffect(() => {
     if (messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0) {
       const newMessage = messages[messages.length - 1]
       
-      // Only notify for messages from other users
       if ((newMessage.user_id || newMessage.userId) !== userId) {
         const messageContent = newMessage.type === 'text' 
           ? newMessage.content 
           : `Sent a ${newMessage.type}`
         
-        // Show notification even if tab is closed (via service worker)
         if (document.hidden || !document.hasFocus()) {
-          // Try service worker first (works when tab is closed)
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then((registration) => {
               if (registration.active) {
@@ -85,14 +83,12 @@ export function ChatInterface({
                 })
               }
             }).catch(() => {
-              // Fallback to regular notification API
               showNotification(
                 `${newMessage.username} in ${roomCode}`,
                 messageContent,
               )
             })
           } else {
-            // Fallback to regular notification API
             showNotification(
               `${newMessage.username} in ${roomCode}`,
               messageContent,
@@ -114,15 +110,18 @@ export function ChatInterface({
     const interval = setInterval(() => {
       setTimeRemaining(getTimeRemaining(expiresAt))
     }, 1000)
-
     return () => clearInterval(interval)
   }, [expiresAt])
 
   const handleSendMessage = async (content: string, type?: string, replyToId?: string) => {
     try {
-      // For now, we'll include reply info in the content
-      // In production, this would be a separate field in the API
-      await sendMessage(content, type || 'text')
+      // If replying, prefix content with reply context for display
+      let finalContent = content
+      if (replyTo) {
+        // Encode reply info as a parseable prefix
+        finalContent = `<<reply:${replyTo.id}:${replyTo.username}:${replyTo.content}>>${content}`
+      }
+      await sendMessage(finalContent, type || 'text')
       setReplyTo(null)
     } catch (error) {
       console.error('[v0] Error sending message:', error)
@@ -134,16 +133,18 @@ export function ChatInterface({
     if (message) {
       setReplyTo({
         id: messageId,
-        content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
+        content: message.content.substring(0, 60) + (message.content.length > 60 ? '...' : ''),
         username: message.username
       })
     }
   }
 
   const handleReact = async (messageId: string, emoji: string) => {
-    // In production, this would call an API endpoint
-    console.log('Reacting to message', messageId, 'with', emoji)
-    // For now, we'll just log it - you'd need to add an API endpoint for reactions
+    try {
+      await reactToMessage(messageId, emoji)
+    } catch (error) {
+      console.error('[v0] Error reacting to message:', error)
+    }
   }
 
   const handleTyping = (isTyping: boolean) => {
@@ -165,37 +166,56 @@ export function ChatInterface({
     try {
       if (!clipped) {
         await clipMessage(messageId, message.content, message.username)
-        showNotification('echo.', 'Message clipped to library')
+        
+        const messageEl = document.querySelector(`[data-message-id="${messageId}"]`)
+        if (messageEl) {
+          messageEl.classList.add('animate-pulse')
+          setTimeout(() => messageEl.classList.remove('animate-pulse'), 500)
+        }
       }
     } catch (error) {
       console.error('[v0] Error clipping message:', error)
     }
   }
 
+  // Parse reply info from message content
+  const parseMessage = (msg: any) => {
+    const replyMatch = msg.content.match(/^<<reply:([^:]+):([^:]+):(.+?)>>(.[\s\S]*)$/)
+    if (replyMatch) {
+      return {
+        ...msg,
+        replyTo: replyMatch[1],
+        replyToUsername: replyMatch[2],
+        replyToContent: replyMatch[3],
+        content: replyMatch[4],
+      }
+    }
+    return msg
+  }
+
   return (
-    <div className="relative flex h-full flex-col bg-gradient-to-b from-background/95 to-background/90 backdrop-blur-sm">
+    <div className="relative flex h-full flex-col bg-background">
       {/* Status Bar */}
-      <div className="border-b border-border/40 bg-card/40 backdrop-blur-md px-5 py-2.5 shadow-sm">
+      <div className="border-b border-border/30 bg-card/60 backdrop-blur-md px-5 py-2">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-xs">
-          <div className="flex items-center gap-2.5 text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">{'Expires in'}</span>
-            <span className="font-mono font-bold text-foreground">{timeRemaining}</span>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="font-mono text-foreground/80">{timeRemaining}</span>
           </div>
           <div className="flex items-center gap-3">
             {isLoading && (
-              <span className="text-muted-foreground animate-pulse">{'Loading...'}</span>
+              <span className="text-muted-foreground animate-pulse text-xs">Syncing...</span>
             )}
             {!isConnected && (
-              <div className="flex items-center gap-2 text-muted-foreground/80">
-                <WifiOff className="h-4 w-4" />
-                <span className="font-medium">{'Reconnecting...'}</span>
+              <div className="flex items-center gap-1.5 text-yellow-500/80">
+                <WifiOff className="h-3.5 w-3.5" />
+                <span className="text-xs">Reconnecting...</span>
               </div>
             )}
             {isConnected && !isLoading && (
-              <div className="flex items-center gap-2 text-foreground/80">
-                <div className="h-2 w-2 rounded-full bg-foreground/60 animate-pulse" />
-                <span className="font-medium text-xs">{'Live'}</span>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500/70" />
+                <span className="text-xs">Live</span>
               </div>
             )}
           </div>
@@ -203,49 +223,50 @@ export function ChatInterface({
       </div>
 
       {/* Messages */}
-      <div className="chat-container flex-1 overflow-y-auto px-6 py-8 scroll-smooth">
+      <div className="chat-container flex-1 overflow-y-auto px-4 py-4 scroll-smooth">
         <div className="mx-auto max-w-3xl space-y-0.5">
           {messages.length === 0 ? (
             <div className="flex h-full min-h-[400px] items-center justify-center">
               <div className="text-center space-y-3">
-                <div className="mx-auto h-16 w-16 rounded-full bg-muted/50 border border-border/50 flex items-center justify-center mb-4">
-                  <MessageCircle className="h-7 w-7 text-muted-foreground" />
+                <div className="mx-auto h-14 w-14 rounded-full bg-muted/30 border border-border/30 flex items-center justify-center mb-4">
+                  <MessageCircle className="h-6 w-6 text-muted-foreground/60" />
                 </div>
-                <p className="text-sm font-medium text-foreground">
-                  {'No messages yet'}
+                <p className="text-sm font-medium text-foreground/80">
+                  No messages yet
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {'Start the conversation'}
+                <p className="text-xs text-muted-foreground/60">
+                  Start the conversation
                 </p>
               </div>
             </div>
           ) : (
             messages.map((message: any, index: number) => {
+              const parsed = parseMessage(message)
               const prevMessage = index > 0 ? messages[index - 1] : null
-              const showAvatar = !prevMessage || prevMessage.user_id !== message.user_id || 
+              const showAvatar = !prevMessage || 
+                (prevMessage.user_id || prevMessage.userId) !== (message.user_id || message.userId) || 
                 (message.created_at && prevMessage.created_at && 
-                 (new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime()) > 300000) // 5 minutes
+                 (new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime()) > 300000)
               
               return (
                 <MessageBubble
                   key={message.id}
                   message={{
-                    ...message,
-                    userId: message.user_id,
+                    ...parsed,
+                    userId: message.user_id || message.userId,
                     imageUrl: message.type === 'image' ? message.content : undefined,
                     clippedBy: [],
                     timestamp: new Date(message.created_at),
                     reactions: message.reactions || {},
-                    readBy: message.read_by || [],
-                    deliveryStatus: message.delivery_status || 'sent',
                   }}
-                  isOwn={message.user_id === userId}
+                  isOwn={(message.user_id || message.userId) === userId}
                   onEdit={handleEditMessage}
                   onToggleClip={handleToggleClip}
                   roomCode={roomCode}
                   showAvatar={showAvatar}
                   onReply={handleReply}
                   onReact={handleReact}
+                  currentUserId={userId}
                 />
               )
             })
@@ -253,7 +274,7 @@ export function ChatInterface({
           
           {typingUsers.length > 0 && (
             <TypingIndicator users={typingUsers.map((u: any) => ({ 
-              userId: u.user_id, 
+              userId: u.user_id || u.userId, 
               username: u.username 
             }))} />
           )}
