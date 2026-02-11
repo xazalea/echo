@@ -150,22 +150,19 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
       const data = await response.json() as { success: boolean; message?: any; aiResponse?: any }
 
       if (data.success && data.message) {
-        setState((prev) => ({
-          ...prev,
-          messages: [...prev.messages, data.message!],
-        }))
+        setState((prev) => {
+          const newMessages = [...prev.messages, data.message!]
+          if (data.aiResponse) {
+            newMessages.push(data.aiResponse)
+          }
+          return {
+            ...prev,
+            messages: newMessages,
+          }
+        })
 
-        if (data.aiResponse) {
-          setTimeout(() => {
-            setState((prev) => ({
-              ...prev,
-              messages: [...prev.messages, data.aiResponse!],
-            }))
-          }, 500)
-        }
-
-        lastMessageIdRef.current = data.message.id
-        poll()
+        // Set lastMessageId to the latest message so poll doesn't re-fetch
+        lastMessageIdRef.current = data.aiResponse?.id || data.message.id
       }
 
       return data
