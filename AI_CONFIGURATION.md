@@ -4,11 +4,19 @@
 
 Echo uses **OpenRouter** with the **Venice AI (GPT-4o)** model to power the AI assistant.
 
+### 🔒 Built-in Cloudflare Edge Proxy
+
+Your app includes an **unblockable proxy** that runs on Cloudflare's edge network:
+- Runs on same domain as your app
+- Automatically deployed with your app
+- Makes OpenRouter virtually impossible to block
+- See `CLOUDFLARE_PROXY.md` for details
+
 ### Location of AI Configuration
 
 **File:** `/app/api/messages/route.ts`
 
-**Lines:** 13-14 and 88-134
+**Lines:** 13-14 and 87-136
 
 ---
 
