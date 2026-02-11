@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
 import { TypingIndicator } from './typing-indicator'
@@ -19,7 +19,7 @@ interface ChatInterfaceProps {
   expiresAt: Date
 }
 
-export function ChatInterface({
+export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatInterface({
   roomCode,
   userId,
   username,
@@ -42,8 +42,7 @@ export function ChatInterface({
     sendMessage, 
     updateTyping, 
     editMessage: editMsg, 
-    reactToMessage,
-    clipMessage 
+    reactToMessage
   } = usePolling({
     roomCode,
     userId,
@@ -165,7 +164,9 @@ export function ChatInterface({
 
     try {
       if (clipped) {
-        await clipMessage(messageId, message.content, message.username)
+        // Save to localStorage using new clip system
+        const { saveClippedMessage } = await import('@/lib/chat-utils')
+        saveClippedMessage(message, roomCode)
         
         const messageEl = document.querySelector(`[data-message-id="${messageId}"]`)
         if (messageEl) {
@@ -293,4 +294,6 @@ export function ChatInterface({
       />
     </div>
   )
-}
+})
+
+ChatInterface.displayName = 'ChatInterface'

@@ -96,6 +96,14 @@ CREATE TABLE IF NOT EXISTS reactions (
   UNIQUE(message_id, user_id, emoji)
 );
 
+-- Profile pictures
+CREATE TABLE IF NOT EXISTS profile_pictures (
+  user_id TEXT PRIMARY KEY,
+  data_url TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);

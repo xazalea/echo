@@ -9,10 +9,12 @@ import { ChatInterface } from '@/components/chat-interface'
 import { ClipsLibrary } from '@/components/clips-library'
 import { DMInbox } from '@/components/dm-inbox'
 import { DMToast } from '@/components/dm-toast'
+import { RoomTabs } from '@/components/room-tabs'
+import { useRoomManager } from '@/hooks/use-room-manager'
 import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
-import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X, Mail } from 'lucide-react'
+import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X, Mail, User } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{
@@ -34,6 +36,10 @@ export default function RoomPage({ params }: PageProps) {
   const [newDMToast, setNewDMToast] = useState<any>(null)
   const notificationPermissionRequested = useRef(false)
   const lastDMCheckRef = useRef<number>(Date.now())
+  const chatInterfaceRef = useRef<any>(null)
+  const { rooms, addRoom, removeRoom, selectRoom } = useRoomManager()
+  const [showProfileUpload, setShowProfileUpload] = useState(false)
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('echo_user')
@@ -44,6 +50,16 @@ export default function RoomPage({ params }: PageProps) {
 
     const userData = JSON.parse(storedUser)
     setUser(userData)
+    
+    // Load profile picture
+    fetch(`/api/profile-picture?userId=${userData.userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.picture) {
+          setProfilePicture(data.picture.dataUrl)
+        }
+      })
+      .catch(console.error)
 
     if (!notificationPermissionRequested.current) {
       notificationPermissionRequested.current = true
@@ -94,6 +110,33 @@ export default function RoomPage({ params }: PageProps) {
     router.push('/')
   }
 
+  const handleShareClip = (clip: any) => {
+    // Share clip as a message in the chat
+    if (chatInterfaceRef.current?.sendMessage) {
+      const clipMessage = `📎 Shared Clip from ${clip.username}:\n"${clip.content}"\n\n🕒 Original time: ${new Date(clip.timestamp).toLocaleString()}\n🔖 Clipped: ${new Date(clip.clippedAt).toLocaleString()}\n📍 Room: ${clip.roomCode}`
+      chatInterfaceRef.current.sendMessage(clipMessage, 'text')
+    }
+  }
+
+  const handleUploadProfilePicture = async (dataUrl: string) => {
+    if (!user) return
+    
+    try {
+      const response = await fetch('/api/profile-picture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.userId, dataUrl }),
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setProfilePicture(dataUrl)
+      }
+    } catch (error) {
+      console.error('[echo] Error uploading profile picture:', error)
+    }
+  }
+
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -104,9 +147,36 @@ export default function RoomPage({ params }: PageProps) {
 
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">
+      {/* Room Tabs */}
+      <RoomTabs
+        rooms={rooms}
+        onSelectRoom={(code) => {
+          selectRoom(code)
+          router.push(`/room/${code}`)
+        }}
+        onCloseRoom={(code) => {
+          removeRoom(code)
+          if (code === resolvedParams.code) {
+            router.push('/')
+          }
+        }}
+        onNewRoom={() => router.push('/')}
+      />
+      
       {/* Header */}
       <header className="border-b border-border/30 bg-card/50 backdrop-blur-md px-4 py-2.5 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
+          {/* Profile Picture Button - Top Left */}
+          <button
+            onClick={() => setShowProfileUpload(true)}
+            className="absolute top-2.5 left-4 z-20 h-8 w-8 rounded-full border-2 border-border/30 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all flex items-center justify-center overflow-hidden"
+          >
+            {profilePicture ? (
+              <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
           <div className="flex items-center gap-3">
             <h1 className="font-light text-xl tracking-tight text-foreground">
               echo<span className="text-muted-foreground/50">.</span>
@@ -176,6 +246,7 @@ export default function RoomPage({ params }: PageProps) {
         {/* Chat Interface */}
         <div className="flex-1 min-w-0">
           <ChatInterface
+            ref={chatInterfaceRef}
             roomCode={resolvedParams.code}
             userId={user.userId}
             username={user.username}
@@ -189,7 +260,10 @@ export default function RoomPage({ params }: PageProps) {
         {/* Clips Sidebar */}
         {showClips && (
           <div className="w-72 border-l border-border/30 bg-card/30 backdrop-blur-sm flex-shrink-0">
-            <ClipsLibrary onClose={() => setShowClips(false)} />
+            <ClipsLibrary 
+              onClose={() => setShowClips(false)} 
+              onShareClip={handleShareClip}
+            />
           </div>
         )}
 
@@ -248,6 +322,15 @@ export default function RoomPage({ params }: PageProps) {
             setShowClips(false)
             setShowUsers(false)
           }}
+        />
+      )}
+      
+      {/* Profile Picture Upload Modal */}
+      {showProfileUpload && (
+        <ProfilePictureUpload
+          currentPicture={profilePicture || undefined}
+          onUpload={handleUploadProfilePicture}
+          onClose={() => setShowProfileUpload(false)}
         />
       )}
     </div>

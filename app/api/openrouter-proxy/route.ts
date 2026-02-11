@@ -1,19 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
-
-const OPENROUTER_API_KEY = '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'
 
 // Proxy endpoint for OpenRouter - runs on Cloudflare Edge
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    // Get API key from environment variable
+    const ctx = getRequestContext()
+    const apiKey = (ctx?.env as any)?.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'OPENROUTER_API_KEY not configured' },
+        { status: 500 }
+      )
+    }
+
     // Forward request to OpenRouter
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://echo.chat',
         'X-Title': 'Echo Chat',

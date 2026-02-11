@@ -57,7 +57,7 @@ export function GifPicker({ onSelect }: GifPickerProps) {
   const loadTrendingGifs = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/giphy?endpoint=trending&limit=20')
+      const response = await fetch('/api/giphy-proxy?endpoint=trending&limit=20')
       const data = await response.json() as { success: boolean; gifs?: any[] }
 
       if (data.success && data.gifs) {
@@ -73,7 +73,7 @@ export function GifPicker({ onSelect }: GifPickerProps) {
   const searchGifs = async (query: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/giphy?q=${encodeURIComponent(query)}&limit=20`)
+      const response = await fetch(`/api/giphy-proxy?q=${encodeURIComponent(query)}&limit=20`)
       const data = await response.json() as { success: boolean; gifs?: any[] }
 
       if (data.success && data.gifs) {

@@ -32,9 +32,17 @@ export interface Room {
   expiresAt: Date
 }
 
-export interface ClippedMessage extends Message {
+export interface ClippedMessage {
+  id: string
+  messageId: string
+  content: string
+  username: string
   roomCode: string
-  clippedAt: Date
+  timestamp: number // Exact timestamp in milliseconds
+  clippedAt: number // Exact timestamp when clipped in milliseconds
+  type: string
+  imageUrl?: string
+  shareCode?: string // For sharing clips
 }
 
 export interface TypingIndicator {

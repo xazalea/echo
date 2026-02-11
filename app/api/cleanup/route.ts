@@ -21,9 +21,8 @@ export async function POST(request: NextRequest) {
     }
 
     const now = getTimestamp()
-    const inactiveThreshold = now - (5 * 60 * 1000) // 5 minutes
 
-    // Find rooms with no online users for 5+ minutes
+    // Find rooms with no online users (immediately delete)
     const inactiveRoomsResult = await db
       .prepare(`
         SELECT r.id, r.code 
@@ -31,30 +30,45 @@ export async function POST(request: NextRequest) {
         WHERE NOT EXISTS (
           SELECT 1 FROM room_users ru 
           WHERE ru.room_id = r.id 
-          AND ru.is_online = 1 
-          AND ru.last_seen > ?
+          AND ru.is_online = 1
         )
       `)
-      .bind(inactiveThreshold)
       .all()
 
     const inactiveRooms = inactiveRoomsResult.results || []
 
-    // Delete messages and users from inactive rooms
+    // Delete messages, reactions, and users from inactive rooms (cascade delete)
     for (const room of inactiveRooms as any[]) {
+      await db.prepare('DELETE FROM reactions WHERE message_id IN (SELECT id FROM messages WHERE room_id = ?)').bind(room.id).run()
       await db.prepare('DELETE FROM messages WHERE room_id = ?').bind(room.id).run()
       await db.prepare('DELETE FROM room_users WHERE room_id = ?').bind(room.id).run()
       await db.prepare('DELETE FROM typing_indicators WHERE room_id = ?').bind(room.id).run()
       await db.prepare('DELETE FROM rooms WHERE id = ?').bind(room.id).run()
     }
 
-    // Delete expired messages
-    await db.prepare('DELETE FROM messages WHERE expires_at < ?').bind(now).run()
-
-    // Delete expired rooms
+    // Delete expired rooms (1 hour after creation)
+    const expiredRoomsResult = await db
+      .prepare('SELECT id FROM rooms WHERE expires_at < ?')
+      .bind(now)
+      .all()
+    
+    const expiredRooms = expiredRoomsResult.results || []
+    
+    // Cascade delete all data for expired rooms
+    for (const room of expiredRooms as any[]) {
+      await db.prepare('DELETE FROM reactions WHERE message_id IN (SELECT id FROM messages WHERE room_id = ?)').bind(room.id).run()
+      await db.prepare('DELETE FROM messages WHERE room_id = ?').bind(room.id).run()
+      await db.prepare('DELETE FROM room_users WHERE room_id = ?').bind(room.id).run()
+      await db.prepare('DELETE FROM typing_indicators WHERE room_id = ?').bind(room.id).run()
+      await db.prepare('DELETE FROM clips WHERE room_code IN (SELECT code FROM rooms WHERE id = ?)').bind(room.id).run()
+    }
+    
     await db.prepare('DELETE FROM rooms WHERE expires_at < ?').bind(now).run()
 
-    // Delete expired direct messages
+    // Delete expired messages (1 hour old)
+    await db.prepare('DELETE FROM messages WHERE expires_at < ?').bind(now).run()
+
+    // Delete expired direct messages (1 hour old)
     await db.prepare('DELETE FROM direct_messages WHERE expires_at < ?').bind(now).run()
 
     // Clean up old typing indicators (5 seconds)
@@ -65,6 +79,7 @@ export async function POST(request: NextRequest) {
       success: true,
       cleaned: {
         inactiveRooms: inactiveRooms.length,
+        expiredRooms: expiredRooms.length,
         timestamp: now,
       },
     })

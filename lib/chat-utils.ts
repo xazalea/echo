@@ -61,16 +61,33 @@ export function getTimeRemaining(expiresAt: Date): string {
   return `${seconds}s`
 }
 
+function generateShareCode(): string {
+  return `clip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
 export function saveClippedMessage(message: Message, roomCode: string): void {
-  const clipped: ClippedMessage = {
-    ...message,
+  const now = Date.now()
+  const clipped = {
+    id: message.id,
+    messageId: message.id,
+    content: message.content,
+    username: message.username,
     roomCode,
-    clippedAt: new Date()
+    timestamp: message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp, // Exact timestamp in milliseconds
+    clippedAt: now, // Exact timestamp when clipped in milliseconds
+    type: message.type || 'text',
+    imageUrl: message.imageUrl,
+    shareCode: generateShareCode()
   }
   
   const clips = getClippedMessages()
-  clips.push(clipped)
-  localStorage.setItem('echo_clips', JSON.stringify(clips))
+  
+  // Check if already clipped
+  const exists = clips.find(c => c.messageId === message.id)
+  if (!exists) {
+    clips.push(clipped)
+    localStorage.setItem('echo_clips', JSON.stringify(clips))
+  }
 }
 
 export function getClippedMessages(): ClippedMessage[] {
@@ -79,16 +96,46 @@ export function getClippedMessages(): ClippedMessage[] {
   const clips = localStorage.getItem('echo_clips')
   if (!clips) return []
   
-  return JSON.parse(clips).map((clip: any) => ({
-    ...clip,
-    timestamp: new Date(clip.timestamp),
-    clippedAt: new Date(clip.clippedAt)
-  }))
+  try {
+    const parsed = JSON.parse(clips)
+    return parsed.map((clip: any) => ({
+      id: clip.id || clip.messageId,
+      messageId: clip.messageId || clip.id,
+      content: clip.content,
+      username: clip.username,
+      roomCode: clip.roomCode,
+      timestamp: clip.timestamp,
+      clippedAt: clip.clippedAt,
+      type: clip.type || 'text',
+      imageUrl: clip.imageUrl,
+      shareCode: clip.shareCode
+    }))
+  } catch (error) {
+    console.error('[echo] Error parsing clips:', error)
+    return []
+  }
 }
 
 export function removeClippedMessage(messageId: string): void {
-  const clips = getClippedMessages().filter(clip => clip.id !== messageId)
+  const clips = getClippedMessages().filter(clip => clip.messageId !== messageId && clip.id !== messageId)
   localStorage.setItem('echo_clips', JSON.stringify(clips))
+}
+
+export function getClipByShareCode(shareCode: string): ClippedMessage | undefined {
+  return getClippedMessages().find(clip => clip.shareCode === shareCode)
+}
+
+export function formatExactTimestamp(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  })
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {

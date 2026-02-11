@@ -5,41 +5,25 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Trash2, Copy, Bookmark, X } from 'lucide-react'
 import type { ClippedMessage } from '@/lib/types'
-import { formatTimestamp } from '@/lib/chat-utils'
+import { formatExactTimestamp } from '@/lib/chat-utils'
+import { ClipShareButton } from '@/components/clip-share-button'
 
 interface ClipsLibraryProps {
   onClose?: () => void
+  onShareClip?: (clip: ClippedMessage) => void
 }
 
-export function ClipsLibrary({ onClose }: ClipsLibraryProps) {
+export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
   const [clips, setClips] = useState<ClippedMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const loadClips = async () => {
     try {
-      const userData = localStorage.getItem('echo_user')
-      if (!userData) {
-        setIsLoading(false)
-        return
-      }
-      
-      const { userId } = JSON.parse(userData)
-      const response = await fetch(`/api/clips?userId=${userId}`)
-      const data = await response.json() as { success: boolean; clips?: any[] }
-      
-      if (data.success && data.clips) {
-        setClips(data.clips.map((clip: any) => ({
-          id: clip.message_id || clip.id,
-          content: clip.message_content,
-          username: clip.original_username,
-          roomCode: clip.room_code,
-          timestamp: new Date(clip.clipped_at),
-          clippedAt: new Date(clip.clipped_at),
-          type: clip.message_type || 'text',
-          imageUrl: clip.message_type === 'image' || clip.message_type === 'gif' ? clip.message_content : undefined,
-        })))
-      }
+      // Load clips from localStorage only
+      const { getClippedMessages } = await import('@/lib/chat-utils')
+      const storedClips = getClippedMessages()
+      setClips(storedClips)
     } catch (error) {
       console.error('[v0] Error loading clips:', error)
     } finally {
@@ -146,7 +130,7 @@ export function ClipsLibrary({ onClose }: ClipsLibraryProps) {
 
                   {/* Time */}
                   <div className="text-[10px] text-muted-foreground/30 mb-2">
-                    {clip.clippedAt ? formatTimestamp(clip.clippedAt) : ''}
+                    {clip.clippedAt ? formatExactTimestamp(clip.clippedAt) : ''}
                   </div>
 
                   {/* Actions */}
@@ -160,6 +144,9 @@ export function ClipsLibrary({ onClose }: ClipsLibraryProps) {
                       <Copy className="h-3 w-3" />
                       {copiedId === clip.id ? 'Copied!' : 'Copy'}
                     </Button>
+                    {onShareClip && (
+                      <ClipShareButton clip={clip} onShare={onShareClip} />
+                    )}
                     <Button
                       onClick={() => handleRemoveClip(clip.id)}
                       size="sm"

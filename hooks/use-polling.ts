@@ -172,7 +172,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
     }
   }
 
-  const updateTyping = async (isTyping: boolean) => {
+  const updateTyping = useCallback(async (isTyping: boolean) => {
     try {
       const userData = localStorage.getItem('echo_user')
       const username = userData ? JSON.parse(userData).username : 'Anonymous'
@@ -187,10 +187,15 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
           isTyping,
         }),
       })
+      
+      // Immediately poll to update typing indicators
+      if (isTyping) {
+        poll()
+      }
     } catch (error) {
       console.error('[v0] Update typing error:', error)
     }
-  }
+  }, [roomCode, userId])
 
   const editMessage = async (messageId: string, content: string) => {
     try {

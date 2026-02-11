@@ -39,15 +39,23 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
 
   const handleInputChange = (value: string) => {
     setMessage(value)
-    onTyping(true)
     
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    
-    typingTimeoutRef.current = setTimeout(() => {
+    if (value.trim()) {
+      onTyping(true)
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        onTyping(false)
+      }, 800)
+    } else {
       onTyping(false)
-    }, 1000)
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
   }
 
   const handleSend = () => {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
-import { Plus, LogIn, ArrowLeft, Clock } from 'lucide-react'
+import { ProfilePictureUpload } from '@/components/profile-picture-upload'
+import { Plus, LogIn, ArrowLeft, Clock, User } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -15,6 +16,46 @@ export default function Home() {
   const [username, setUsername] = useState('')
   const [mode, setMode] = useState<'home' | 'join' | 'create'>('home')
   const [loading, setLoading] = useState(false)
+  const [showProfileUpload, setShowProfileUpload] = useState(false)
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Load profile picture if user exists
+    const storedUser = localStorage.getItem('echo_user')
+    if (storedUser) {
+      const { userId } = JSON.parse(storedUser)
+      fetch(`/api/profile-picture?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.picture) {
+            setProfilePicture(data.picture.dataUrl)
+          }
+        })
+        .catch(console.error)
+    }
+  }, [])
+
+  const handleUploadProfilePicture = async (dataUrl: string) => {
+    const storedUser = localStorage.getItem('echo_user')
+    if (!storedUser) return
+
+    const { userId } = JSON.parse(storedUser)
+    
+    try {
+      const response = await fetch('/api/profile-picture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, dataUrl }),
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setProfilePicture(dataUrl)
+      }
+    } catch (error) {
+      console.error('[echo] Error uploading profile picture:', error)
+    }
+  }
 
   const handleJoinRoom = async () => {
     if (!roomCode.trim() || !username.trim() || loading) return
@@ -89,6 +130,19 @@ export default function Home() {
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4 bg-background overflow-hidden">
         <div className="absolute inset-0 bg-gradient-enhanced" />
+        
+        {/* Profile Picture Button - Top Left */}
+        <button
+          onClick={() => setShowProfileUpload(true)}
+          className="absolute top-4 left-4 z-20 h-10 w-10 rounded-full border-2 border-border/30 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all flex items-center justify-center overflow-hidden"
+        >
+          {profilePicture ? (
+            <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
+          ) : (
+            <User className="h-5 w-5 text-muted-foreground" />
+          )}
+        </button>
+        
         <div className="relative z-10 w-full max-w-sm space-y-10">
           {/* Logo */}
           <div className="text-center space-y-2">
@@ -252,5 +306,15 @@ export default function Home() {
     )
   }
 
-  return null
+  return (
+    <>
+      {showProfileUpload && (
+        <ProfilePictureUpload
+          currentPicture={profilePicture || undefined}
+          onUpload={handleUploadProfilePicture}
+          onClose={() => setShowProfileUpload(false)}
+        />
+      )}
+    </>
+  )
 }
