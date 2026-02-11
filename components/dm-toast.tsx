@@ -95,8 +95,6 @@ export function DMToast({ message, onDismiss, onView }: DMToastProps) {
               </div>
             )}
           </div>
-        </div>
-      </div>
     </div>
   )
 }

@@ -61,7 +61,7 @@ export default function RoomPage({ params }: PageProps) {
     const dmPollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/dm?userId=${userData.userId}`)
-        const data = await response.json()
+        const data = await response.json() as { success: boolean; messages?: any[] }
         
         if (data.success && data.messages && data.messages.length > 0) {
           // Check for new DMs since last check
