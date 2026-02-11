@@ -7,7 +7,7 @@ import { TypingIndicator } from './typing-indicator'
 import { usePolling } from '@/hooks/use-polling'
 import type { Message, User } from '@/lib/types'
 import { getTimeRemaining, showNotification } from '@/lib/chat-utils'
-import { Clock, WifiOff } from 'lucide-react'
+import { Clock, WifiOff, MessageCircle, Wifi } from 'lucide-react'
 
 interface ChatInterfaceProps {
   roomCode: string
@@ -173,29 +173,29 @@ export function ChatInterface({
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-background/80 backdrop-blur-sm">
+    <div className="relative flex h-full flex-col bg-gradient-to-b from-background/95 to-background/90 backdrop-blur-sm">
       {/* Status Bar */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm px-4 py-2">
+      <div className="border-b border-border/40 bg-card/40 backdrop-blur-md px-5 py-2.5 shadow-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2.5 text-muted-foreground">
+            <Clock className="h-4 w-4" />
             <span className="font-medium">{'Expires in'}</span>
-            <span className="font-mono font-semibold text-foreground">{timeRemaining}</span>
+            <span className="font-mono font-bold text-foreground">{timeRemaining}</span>
           </div>
           <div className="flex items-center gap-3">
             {isLoading && (
-              <span className="text-muted-foreground">{'Loading...'}</span>
+              <span className="text-muted-foreground animate-pulse">{'Loading...'}</span>
             )}
             {!isConnected && (
-              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
-                <WifiOff className="h-3.5 w-3.5" />
-                <span className="font-medium">{'Offline'}</span>
+              <div className="flex items-center gap-2 text-muted-foreground/80">
+                <WifiOff className="h-4 w-4" />
+                <span className="font-medium">{'Reconnecting...'}</span>
               </div>
             )}
             {isConnected && !isLoading && (
-              <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500">
-                <div className="h-2 w-2 rounded-full bg-current animate-pulse" />
-                <span className="font-medium">{'Connected'}</span>
+              <div className="flex items-center gap-2 text-foreground/80">
+                <div className="h-2 w-2 rounded-full bg-foreground/60 animate-pulse" />
+                <span className="font-medium text-xs">{'Live'}</span>
               </div>
             )}
           </div>
@@ -203,13 +203,13 @@ export function ChatInterface({
       </div>
 
       {/* Messages */}
-      <div className="chat-container flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
-        <div className="mx-auto max-w-3xl space-y-1">
+      <div className="chat-container flex-1 overflow-y-auto px-6 py-8 scroll-smooth">
+        <div className="mx-auto max-w-3xl space-y-0.5">
           {messages.length === 0 ? (
             <div className="flex h-full min-h-[400px] items-center justify-center">
-              <div className="text-center space-y-2">
-                <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <span className="text-2xl">💬</span>
+              <div className="text-center space-y-3">
+                <div className="mx-auto h-16 w-16 rounded-full bg-muted/50 border border-border/50 flex items-center justify-center mb-4">
+                  <MessageCircle className="h-7 w-7 text-muted-foreground" />
                 </div>
                 <p className="text-sm font-medium text-foreground">
                   {'No messages yet'}

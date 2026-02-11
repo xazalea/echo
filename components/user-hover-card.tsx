@@ -30,13 +30,13 @@ export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
         <HoverCardContent className="w-64 border-border bg-card p-4" align="start">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/50 border border-border/50 text-sm font-semibold text-foreground shadow-sm">
                 {username.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1">
                 <p className="font-medium text-sm text-foreground">{username}</p>
                 <p className="text-xs text-muted-foreground">
-                  {isOwn ? 'You' : 'Anonymous user'}
+                  {isOwn ? 'You' : 'Active user'}
                 </p>
               </div>
             </div>
@@ -45,11 +45,11 @@ export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
               <Button
                 onClick={() => setShowDMOverlay(true)}
                 size="sm"
-                className="w-full gap-2 border border-border bg-transparent text-foreground hover:border-foreground hover:bg-accent"
+                className="w-full gap-2 h-9 rounded-lg border border-border/50 bg-transparent text-foreground hover:border-foreground/50 hover:bg-accent transition-all"
                 variant="ghost"
               >
                 <MessageSquare className="h-4 w-4" />
-                <span>{'Send Direct Message'}</span>
+                <span className="font-medium">{'Send Message'}</span>
               </Button>
             )}
           </div>

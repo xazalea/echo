@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Bookmark, Edit2, Check, X, BookmarkCheck, Reply, CheckCheck } from 'lucide-react'
+import { Bookmark, Edit2, Check, X, BookmarkCheck, Reply, CheckCheck, ThumbsUp, Heart, Laugh, CircleAlert, Frown, HandHeart, SmilePlus } from 'lucide-react'
 import type { Message } from '@/lib/types'
 import { formatTimestamp, saveClippedMessage } from '@/lib/chat-utils'
 import { UserHoverCard } from './user-hover-card'
@@ -24,7 +24,20 @@ interface MessageBubbleProps {
   onReact?: (messageId: string, emoji: string) => void
 }
 
-const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+const REACTION_OPTIONS = [
+  { icon: ThumbsUp, label: 'Like', value: 'like' },
+  { icon: Heart, label: 'Love', value: 'love' },
+  { icon: Laugh, label: 'Laugh', value: 'laugh' },
+  { icon: CircleAlert, label: 'Surprise', value: 'surprise' },
+  { icon: Frown, label: 'Sad', value: 'sad' },
+  { icon: HandHeart, label: 'Thank', value: 'thank' }
+]
+
+// Helper to get icon from reaction value
+const getReactionIcon = (reaction: string) => {
+  const option = REACTION_OPTIONS.find(r => r.value === reaction)
+  return option ? option.icon : ThumbsUp
+}
 
 export function MessageBubble({
   message,
@@ -73,17 +86,17 @@ export function MessageBubble({
 
   return (
     <div
-      className={`group flex gap-2 px-2 py-1 transition-colors hover:bg-muted/30 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+      className={`group flex gap-3 px-4 py-2 transition-colors hover:bg-muted/20 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
     >
       {/* Avatar */}
       {showAvatar && (
         <div className="flex-shrink-0 pt-1">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/50 text-xs font-semibold text-foreground shadow-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-muted via-muted/80 to-muted/60 text-xs font-bold text-foreground shadow-sm ring-1 ring-border/30">
             {message.username.charAt(0).toUpperCase()}
           </div>
         </div>
       )}
-      {!showAvatar && <div className="w-7" />}
+      {!showAvatar && <div className="w-8" />}
 
       {/* Content */}
       <div className={`flex-1 ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-0.5 min-w-0`}>
@@ -111,11 +124,11 @@ export function MessageBubble({
         {/* Message Bubble */}
         <div className="relative flex items-end gap-2 group/message">
           <div
-            className={`relative rounded-2xl px-3.5 py-2 transition-all ${
+            className={`relative rounded-2xl px-4 py-2.5 transition-all shadow-sm ${
               isOwn 
-                ? 'bg-foreground text-background rounded-br-sm' 
-                : 'bg-muted text-foreground rounded-bl-sm'
-            } ${isEditing ? 'ring-2 ring-border' : ''} max-w-[85%] sm:max-w-[75%]`}
+                ? 'bg-foreground text-background rounded-br-md' 
+                : 'bg-muted/80 text-foreground rounded-bl-md border border-border/40'
+            } ${isEditing ? 'ring-2 ring-foreground/30' : ''} max-w-[80%] sm:max-w-[70%]`}
           >
             {isEditing ? (
               <div className="flex items-center gap-2">
@@ -153,29 +166,51 @@ export function MessageBubble({
               </div>
             ) : (
               <>
-                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
+                {/* Text Content */}
+                {message.type === 'text' && (
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
+                )}
                 
-                {message.imageUrl && (
-                  <img
-                    src={message.imageUrl || "/placeholder.svg"}
-                    alt="Shared image"
-                    className="mt-2 max-h-64 rounded-xl border border-border/50"
-                  />
+                {/* GIF */}
+                {message.type === 'gif' && (
+                  <div className="mt-1">
+                    <img
+                      src={message.content}
+                      alt="GIF"
+                      className="max-h-64 rounded-lg border border-border/50 w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                
+                {/* Image */}
+                {(message.type === 'image' || message.imageUrl) && (
+                  <div className="mt-1">
+                    <img
+                      src={message.imageUrl || message.content}
+                      alt="Shared image"
+                      className="max-h-64 rounded-lg border border-border/50 w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
                 )}
                 
                 {/* Reactions */}
                 {hasReactions && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {Object.entries(reactions).map(([emoji, userIds]) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(emoji)}
-                        className="flex items-center gap-1 rounded-full bg-background/80 px-2 py-0.5 text-xs border border-border/50 hover:bg-background transition-colors"
-                      >
-                        <span>{emoji}</span>
-                        <span className="text-[10px] text-muted-foreground">{userIds.length}</span>
-                      </button>
-                    ))}
+                    {Object.entries(reactions).map(([reaction, userIds]) => {
+                      const ReactionIcon = getReactionIcon(reaction)
+                      return (
+                        <button
+                          key={reaction}
+                          onClick={() => handleReaction(reaction)}
+                          className="flex items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs border border-border/50 hover:bg-background hover:border-foreground/30 transition-colors"
+                        >
+                          <ReactionIcon className="h-3 w-3" />
+                          <span className="text-[10px] text-muted-foreground font-medium">{userIds.length}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </>
@@ -236,21 +271,25 @@ export function MessageBubble({
                     variant="ghost"
                     className="h-6 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                   >
-                    <span>😊</span>
+                    <SmilePlus className="h-3 w-3" />
                     <span>{'React'}</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-1" align={isOwn ? 'end' : 'start'}>
+                <PopoverContent className="w-auto p-2" align={isOwn ? 'end' : 'start'}>
                   <div className="flex gap-1">
-                    {REACTION_EMOJIS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(emoji)}
-                        className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center text-lg transition-colors"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                    {REACTION_OPTIONS.map((option) => {
+                      const Icon = option.icon
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => handleReaction(option.value)}
+                          className="h-9 w-9 rounded-lg hover:bg-muted border border-transparent hover:border-border/50 flex items-center justify-center transition-all group"
+                          title={option.label}
+                        >
+                          <Icon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </button>
+                      )
+                    })}
                   </div>
                 </PopoverContent>
               </Popover>

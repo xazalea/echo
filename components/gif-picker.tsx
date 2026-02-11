@@ -87,16 +87,16 @@ export function GifPicker({ onSelect }: GifPickerProps) {
   }
 
   return (
-    <div className="border-border bg-card">
+    <div className="border-border/50 bg-card rounded-lg overflow-hidden">
       {/* Search */}
-      <div className="border-b border-border p-3">
+      <div className="border-b border-border/50 p-3 bg-card/50">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search GIFs..."
-            className="h-9 border-border bg-background pl-9 text-sm"
+            className="h-9 rounded-lg border-border/50 bg-background/50 pl-9 text-sm focus-visible:border-foreground/50"
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -105,34 +105,39 @@ export function GifPicker({ onSelect }: GifPickerProps) {
       </div>
 
       {/* Grid */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className="max-h-[400px] overflow-y-auto bg-background/30">
         {gifs.length > 0 ? (
           <div className="grid grid-cols-2 gap-2 p-3">
             {gifs.map((gif) => (
               <button
                 key={gif.id}
                 onClick={() => onSelect(gif.url)}
-                className="group relative aspect-square overflow-hidden rounded border border-border transition-all hover:border-foreground"
+                className="group relative aspect-square overflow-hidden rounded-lg border border-border/50 transition-all hover:border-foreground/50 hover:shadow-md"
               >
                 <img
                   src={gif.preview || '/placeholder.svg'}
                   alt={gif.title}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-background/0 transition-colors group-hover:bg-background/10" />
+                <div className="absolute inset-0 bg-background/0 transition-colors group-hover:bg-background/5" />
               </button>
             ))}
           </div>
         ) : (
-          <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
-            {isLoading ? 'Loading GIFs...' : 'No GIFs found'}
+          <div className="flex h-[200px] items-center justify-center">
+            <div className="text-center space-y-2">
+              <Search className="h-8 w-8 text-muted-foreground/50 mx-auto" />
+              <p className="text-sm text-muted-foreground">
+                {isLoading ? 'Loading GIFs...' : 'No GIFs found'}
+              </p>
+            </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border p-2 text-center text-xs text-muted-foreground">
+      <div className="border-t border-border/50 p-2 text-center text-[10px] text-muted-foreground/70 bg-card/50">
         {'Powered by Giphy'}
       </div>
     </div>

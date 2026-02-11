@@ -5,7 +5,7 @@ import React from "react"
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Send, ImageIcon, Smile, Sticker, X } from 'lucide-react'
+import { Send, ImageIcon, Film, Sticker, X } from 'lucide-react'
 import { GifPicker } from './gif-picker'
 import {
   Popover,
@@ -68,7 +68,7 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
   }
 
   const handleGifSelect = (gifUrl: string) => {
-    onSend('', gifUrl)
+    onSend(gifUrl, 'gif')
     setShowGifPicker(false)
   }
 
@@ -87,7 +87,7 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
   }
 
   return (
-    <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm px-4 py-3">
+    <div className="border-t border-border/40 bg-card/40 backdrop-blur-md px-6 py-4 shadow-sm">
       <div className="mx-auto max-w-3xl">
         {/* Reply Preview */}
         {replyTo && (
@@ -107,9 +107,9 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
           </div>
         )}
         
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-3">
           {/* Textarea */}
-          <div className="flex-1 rounded-2xl border border-border/50 bg-background shadow-sm transition-shadow focus-within:border-foreground/50 focus-within:shadow-md">
+          <div className="flex-1 rounded-2xl border border-border/50 bg-card/50 shadow-md backdrop-blur-sm transition-all focus-within:border-foreground/40 focus-within:shadow-lg focus-within:bg-card/70">
             <Textarea
               ref={textareaRef}
               value={message}
@@ -117,12 +117,12 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
               onKeyDown={handleKeyDown}
               placeholder={replyTo ? `Reply to ${replyTo.username}...` : "Type a message..."}
               disabled={disabled}
-              className="min-h-[44px] max-h-32 resize-none border-0 bg-transparent px-4 py-3 text-sm focus-visible:ring-0"
+              className="min-h-[48px] max-h-32 resize-none border-0 bg-transparent px-5 py-3.5 text-sm leading-relaxed focus-visible:ring-0 placeholder:text-muted-foreground/60"
               rows={1}
             />
             
             {/* Actions Bar */}
-            <div className="flex items-center gap-1 border-t border-border/50 px-3 py-1.5">
+            <div className="flex items-center gap-1.5 border-t border-border/30 px-4 py-2">
               {/* Image Upload */}
               <input
                 type="file"
@@ -136,9 +136,9 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
                 asChild
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
               >
-                <label htmlFor="image-upload" className="cursor-pointer">
+                <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center">
                   <ImageIcon className="h-4 w-4" />
                 </label>
               </Button>
@@ -149,10 +149,10 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
                     disabled={disabled}
                   >
-                    <Smile className="h-4 w-4" />
+                    <Film className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
@@ -160,18 +160,8 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
                 </PopoverContent>
               </Popover>
 
-              {/* Sticker */}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
-                disabled={disabled}
-              >
-                <Sticker className="h-4 w-4" />
-              </Button>
-
-              <div className="ml-auto text-[10px] text-muted-foreground/70">
-                {disabled ? 'Connecting...' : 'Shift+Enter'}
+              <div className="ml-auto text-[10px] font-medium text-muted-foreground/60">
+                {disabled ? 'Connecting...' : '↵ to send'}
               </div>
             </div>
           </div>
@@ -180,9 +170,9 @@ export function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }
           <Button
             onClick={handleSend}
             disabled={!message.trim() || disabled}
-            className="h-11 w-11 rounded-full bg-foreground p-0 text-background shadow-md hover:bg-foreground/90 disabled:opacity-30 transition-all hover:scale-105 active:scale-95"
+            className="h-12 w-12 rounded-full bg-foreground p-0 text-background shadow-lg hover:bg-foreground/90 disabled:opacity-20 transition-all hover:scale-105 active:scale-95 hover:shadow-xl"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-4.5 w-4.5" />
           </Button>
         </div>
       </div>

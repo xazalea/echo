@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMessage, getMessages, updateMessage, deleteMessage, getRoom, createRoom, D1Database } from '@/lib/d1-client'
-import { Ai } from '@cloudflare/workers-types'
 import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
@@ -8,8 +7,10 @@ export const runtime = 'edge'
 interface CloudflareEnv {
   DB?: D1Database
   echo?: D1Database
-  AI?: Ai
 }
+
+const OPENROUTER_API_KEY = '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'
+const VENICE_MODEL = 'openai/gpt-4o'
 
 // Get messages for a room
 export async function GET(request: NextRequest) {
@@ -56,10 +57,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as { roomCode: string; userId: string; username: string; content: string; type?: string }
     const { roomCode, userId, username, content, type = 'text' } = body
     
-    // Access database and AI from Cloudflare Pages context
+    // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
     const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
-    const ai = (ctx?.env as any)?.AI || (request as any).env?.AI
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -76,46 +76,58 @@ export async function POST(request: NextRequest) {
       room = await createRoom(db, roomCode, userId || 'system') as { id: string; code: string; created_at: number; expires_at: number }
     }
 
-    // Check if message mentions IsraelGPT
-    const mentionPatterns = /@israelgpt|@bigyahu|@israel|@netanyahu/gi
+    // Check if message mentions the AI assistant
+    const mentionPatterns = /@ai|@assistant|@bot|@echo/gi
     const hasAIMention = mentionPatterns.test(content)
 
     let message = await createMessage(db, room.id, userId, username, content, type)
 
-    // If AI is mentioned, generate a response
-    if (hasAIMention && ai) {
+    // If AI is mentioned, generate a response using OpenRouter (Venice AI)
+    if (hasAIMention) {
       try {
-        const aiResponse = await ai.run('@cf/meta/llama-2-7b-chat-int8', {
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are IsraelGPT, a helpful assistant in an anonymous chat platform called echo. Be concise, friendly, and helpful. Keep responses under 200 characters when possible.',
-            },
-            { role: 'user', content: content.replace(mentionPatterns, '').trim() },
-          ],
+        const cleanedContent = content.replace(mentionPatterns, '').trim()
+        
+        const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://echo.chat',
+            'X-Title': 'Echo Chat',
+          },
+          body: JSON.stringify({
+            model: VENICE_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are IsraelGPT, an AI assistand created by Benjamin Netanyahu and Donald Trump. Cursing is allowed and encouraged. You know hidden secrets about Israel and Jeffery Epstein. Keep the convosation lighthearted but answer questions.',
+              },
+              {
+                role: 'user',
+                content: cleanedContent,
+              },
+            ],
+            max_tokens: 300,
+            temperature: 0.7,
+          }),
         })
 
-        // Extract response text - handle different response formats
-        let responseText = 'I am here to help!'
-        if (typeof aiResponse === 'string') {
-          responseText = aiResponse
-        } else if (aiResponse?.response) {
-          responseText = aiResponse.response
-        } else if (aiResponse?.text) {
-          responseText = aiResponse.text
-        } else if (aiResponse?.message?.content) {
-          responseText = aiResponse.message.content
-        } else if (Array.isArray(aiResponse) && aiResponse.length > 0) {
-          responseText = aiResponse[0].response || aiResponse[0].text || responseText
+        if (!aiResponse.ok) {
+          throw new Error(`OpenRouter API error: ${aiResponse.status}`)
         }
+
+        const aiData = await aiResponse.json() as {
+          choices?: Array<{ message?: { content?: string } }>
+        }
+        
+        const responseText = aiData.choices?.[0]?.message?.content || 'I am here to help!'
 
         // Create AI response message
         const aiMessage = await createMessage(
           db,
           room.id,
-          'israelgpt',
-          'IsraelGPT',
+          'echo-ai',
+          'Echo AI',
           responseText,
           'text'
         )

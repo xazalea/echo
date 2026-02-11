@@ -120,13 +120,17 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
 
   const sendMessage = async (content: string, type = 'text') => {
     try {
+      // Get username from global storage
+      const userData = localStorage.getItem('echo_user')
+      const username = userData ? JSON.parse(userData).username : 'Anonymous'
+      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomCode,
           userId,
-          username: localStorage.getItem(`echo_username_${roomCode}`) || 'Anonymous',
+          username,
           content,
           type,
         }),
@@ -167,13 +171,17 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
 
   const updateTyping = async (isTyping: boolean) => {
     try {
+      // Get username from global storage
+      const userData = localStorage.getItem('echo_user')
+      const username = userData ? JSON.parse(userData).username : 'Anonymous'
+      
       await fetch('/api/typing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomCode,
           userId,
-          username: localStorage.getItem(`echo_username_${roomCode}`) || 'Anonymous',
+          username,
           isTyping,
         }),
       })

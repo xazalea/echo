@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
+import { Plus, LogIn, ArrowLeft, Clock } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -100,23 +101,26 @@ export default function Home() {
           <div className="space-y-3">
             <Button
               onClick={() => setMode('create')}
-              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md"
+              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md flex items-center justify-center gap-3"
               variant="ghost"
             >
+              <Plus className="h-5 w-5" />
               <span className="font-medium">{'Create Room'}</span>
             </Button>
             <Button
               onClick={() => setMode('join')}
-              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md"
+              className="h-14 w-full rounded-xl border border-border/50 bg-card text-foreground shadow-sm transition-all hover:border-foreground/50 hover:bg-accent hover:shadow-md flex items-center justify-center gap-3"
               variant="ghost"
             >
+              <LogIn className="h-5 w-5" />
               <span className="font-medium">{'Join Room'}</span>
             </Button>
           </div>
 
           {/* Footer */}
-          <div className="pt-8 text-center text-xs text-muted-foreground/70">
-            {'All messages expire after 1 hour'}
+          <div className="pt-8 text-center text-xs text-muted-foreground/70 flex items-center justify-center gap-2">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{'All messages expire after 1 hour'}</span>
           </div>
         </div>
       </div>
@@ -175,8 +179,9 @@ export default function Home() {
             <Button
               onClick={handleJoinRoom}
               disabled={!roomCode.trim() || !username.trim()}
-              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30"
+              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30 flex items-center justify-center gap-2"
             >
+              <LogIn className="h-4 w-4" />
               <span className="font-medium">{'Join Room'}</span>
             </Button>
           </div>
@@ -196,9 +201,10 @@ export default function Home() {
           <div className="text-center">
             <button
               onClick={() => setMode('home')}
-              className="mb-6 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-6 text-sm text-muted-foreground transition-colors hover:text-foreground flex items-center gap-2 mx-auto"
             >
-              {'← Back'}
+              <ArrowLeft className="h-4 w-4" />
+              <span>{'Back'}</span>
             </button>
             <h1 className="font-light text-4xl tracking-tight text-foreground">
               {'Create Room'}
@@ -244,8 +250,9 @@ export default function Home() {
             <Button
               onClick={handleCreateRoom}
               disabled={!username.trim()}
-              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30"
+              className="h-12 w-full rounded-xl bg-foreground text-background shadow-md transition-all hover:bg-foreground/90 hover:shadow-lg disabled:opacity-30 flex items-center justify-center gap-2"
             >
+              <Plus className="h-4 w-4" />
               <span className="font-medium">{'Create Room'}</span>
             </Button>
           </div>
