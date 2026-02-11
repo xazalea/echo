@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -44,11 +44,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, messageId, messageContent, originalUsername, roomCode } = await request.json()
+    const body = await request.json() as { userId: string; messageId: string; messageContent: string; originalUsername: string; roomCode: string }
+    const { userId, messageId, messageContent, originalUsername, roomCode } = body
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response = await fetch(giphyUrl)
-    const data = await response.json()
+    const data = await response.json() as { data: any[]; pagination: any }
 
     if (!response.ok) {
       return NextResponse.json(
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the response to simplify client usage
-    const gifs = data.data.map((gif: any) => ({
+    const gifs = (data.data || []).map((gif: any) => ({
       id: gif.id,
       title: gif.title,
       url: gif.images.fixed_height.url,

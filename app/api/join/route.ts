@@ -12,11 +12,12 @@ interface CloudflareEnv {
 
 export async function POST(request: NextRequest) {
   try {
-    const { roomCode, userId, username } = await request.json()
+    const body = await request.json() as { roomCode: string; userId: string; username: string }
+    const { roomCode, userId, username } = body
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })

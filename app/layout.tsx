@@ -33,7 +33,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('[echo] Service Worker registered'))
+                    .catch(err => console.error('[echo] Service Worker registration failed:', err));
+                });
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   )
 }

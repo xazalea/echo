@@ -11,7 +11,6 @@ import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Users, LogOut, Copy, Check } from 'lucide-react'
-import { VantaBackground } from '@/components/vanta-background'
 
 interface PageProps {
   params: Promise<{
@@ -79,16 +78,20 @@ export default function RoomPage({ params }: PageProps) {
 
   if (!user) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center">
-        <VantaBackground />
+      <div className="relative flex min-h-screen items-center justify-center bg-background">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.02)_0%,transparent_50%)]" />
         <div className="relative z-10 text-muted-foreground">{'Loading...'}</div>
       </div>
     )
   }
 
   return (
-    <div className="relative flex h-screen flex-col">
-      <VantaBackground />
+    <div className="relative flex h-screen flex-col bg-background overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-enhanced" />
+      <div className="absolute inset-0 bg-grid-pattern" />
+      <div className="absolute inset-0 bg-dots-pattern" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/80" />
       {/* Header */}
       <header className="relative z-10 border-b border-border/50 bg-card/50 backdrop-blur-sm px-4 py-3 shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between">

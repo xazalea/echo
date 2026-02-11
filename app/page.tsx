@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
-import { VantaBackground } from '@/components/vanta-background'
 
 export default function Home() {
   const router = useRouter()
@@ -24,7 +23,7 @@ export default function Home() {
     // Verify room exists and join
     try {
       const response = await fetch(`/api/rooms?code=${roomCode.toUpperCase()}`)
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; room?: { code: string }; error?: string }
       
       if (data.success) {
         // Join the room
@@ -66,9 +65,9 @@ export default function Home() {
         }),
       })
       
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; room?: { code: string }; error?: string }
       
-      if (data.success) {
+      if (data.success && data.room) {
         router.push(`/room/${data.room.code}`)
       } else {
         alert(data.error || 'Failed to create room')
@@ -81,8 +80,11 @@ export default function Home() {
 
   if (mode === 'home') {
     return (
-      <div className="relative flex min-h-screen items-center justify-center p-4">
-        <VantaBackground />
+      <div className="relative flex min-h-screen items-center justify-center p-4 bg-background overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-enhanced" />
+        <div className="absolute inset-0 bg-grid-pattern" />
+        <div className="absolute inset-0 bg-dots-pattern" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />
         <div className="relative z-10 w-full max-w-md space-y-8">
           {/* Logo */}
           <div className="text-center space-y-3">
@@ -123,8 +125,11 @@ export default function Home() {
 
   if (mode === 'join') {
     return (
-      <div className="relative flex min-h-screen items-center justify-center p-4">
-        <VantaBackground />
+      <div className="relative flex min-h-screen items-center justify-center p-4 bg-background overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-enhanced" />
+        <div className="absolute inset-0 bg-grid-pattern" />
+        <div className="absolute inset-0 bg-dots-pattern" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />
         <div className="relative z-10 w-full max-w-md space-y-8">
           <div className="text-center">
             <button
@@ -182,8 +187,11 @@ export default function Home() {
 
   if (mode === 'create') {
     return (
-      <div className="relative flex min-h-screen items-center justify-center p-4">
-        <VantaBackground />
+      <div className="relative flex min-h-screen items-center justify-center p-4 bg-background overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-enhanced" />
+        <div className="absolute inset-0 bg-grid-pattern" />
+        <div className="absolute inset-0 bg-dots-pattern" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />
         <div className="relative z-10 w-full max-w-md space-y-8">
           <div className="text-center">
             <button

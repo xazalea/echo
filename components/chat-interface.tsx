@@ -55,16 +55,50 @@ export function ChatInterface({
     setMessages(messages)
   }, [messages, setMessages])
 
-  // Show notifications for new messages
+  // Show notifications for new messages (works even when tab is closed via service worker)
   useEffect(() => {
     if (messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0) {
       const newMessage = messages[messages.length - 1]
       
-      if (document.hidden && (newMessage.user_id || newMessage.userId) !== userId) {
-        showNotification(
-          `${newMessage.username} in ${roomCode}`,
-          newMessage.type === 'text' ? newMessage.content : `Sent a ${newMessage.type}`,
-        )
+      // Only notify for messages from other users
+      if ((newMessage.user_id || newMessage.userId) !== userId) {
+        const messageContent = newMessage.type === 'text' 
+          ? newMessage.content 
+          : `Sent a ${newMessage.type}`
+        
+        // Show notification even if tab is closed (via service worker)
+        if (document.hidden || !document.hasFocus()) {
+          // Try service worker first (works when tab is closed)
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then((registration) => {
+              if (registration.active) {
+                registration.active.postMessage({
+                  type: 'SHOW_NOTIFICATION',
+                  title: `${newMessage.username} in ${roomCode}`,
+                  body: messageContent,
+                  icon: '/icon-192.png',
+                  data: {
+                    url: `/room/${roomCode}`,
+                    roomCode,
+                    messageId: newMessage.id,
+                  },
+                })
+              }
+            }).catch(() => {
+              // Fallback to regular notification API
+              showNotification(
+                `${newMessage.username} in ${roomCode}`,
+                messageContent,
+              )
+            })
+          } else {
+            // Fallback to regular notification API
+            showNotification(
+              `${newMessage.username} in ${roomCode}`,
+              messageContent,
+            )
+          }
+        }
       }
     }
     prevMessageCountRef.current = messages.length

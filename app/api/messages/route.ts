@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -53,12 +53,13 @@ export async function GET(request: NextRequest) {
 // Create a new message
 export async function POST(request: NextRequest) {
   try {
-    const { roomCode, userId, username, content, type = 'text' } = await request.json()
+    const body = await request.json() as { roomCode: string; userId: string; username: string; content: string; type?: string }
+    const { roomCode, userId, username, content, type = 'text' } = body
     
     // Access database and AI from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
-    const ai = ctx?.env?.AI || (request as any).env?.AI
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const ai = (ctx?.env as any)?.AI || (request as any).env?.AI
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -95,13 +96,27 @@ export async function POST(request: NextRequest) {
           ],
         })
 
+        // Extract response text - handle different response formats
+        let responseText = 'I am here to help!'
+        if (typeof aiResponse === 'string') {
+          responseText = aiResponse
+        } else if (aiResponse?.response) {
+          responseText = aiResponse.response
+        } else if (aiResponse?.text) {
+          responseText = aiResponse.text
+        } else if (aiResponse?.message?.content) {
+          responseText = aiResponse.message.content
+        } else if (Array.isArray(aiResponse) && aiResponse.length > 0) {
+          responseText = aiResponse[0].response || aiResponse[0].text || responseText
+        }
+
         // Create AI response message
         const aiMessage = await createMessage(
           db,
           room.id,
           'israelgpt',
           'IsraelGPT',
-          aiResponse.response || 'I am here to help!',
+          responseText,
           'text'
         )
 
@@ -132,11 +147,12 @@ export async function POST(request: NextRequest) {
 // Update a message
 export async function PATCH(request: NextRequest) {
   try {
-    const { messageId, content } = await request.json()
+    const body = await request.json() as { messageId: string; content: string }
+    const { messageId, content } = body
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })
@@ -169,7 +185,7 @@ export async function DELETE(request: NextRequest) {
     
     // Access database from Cloudflare Pages context
     const ctx = getRequestContext()
-    const db = ctx?.env?.echo || (request as any).env?.echo || (request as any).env?.DB
+    const db = (ctx?.env as any)?.echo || (request as any).env?.echo || (request as any).env?.DB
 
     if (!db) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 })

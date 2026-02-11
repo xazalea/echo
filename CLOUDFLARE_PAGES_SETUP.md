@@ -27,7 +27,7 @@ If you see an error about conflicting flags:
 #### Add D1 Database Binding:
 - Click **Add binding**
 - Type: **D1 Database**
-- Variable name: `DB`
+- Variable name: `echo` (IMPORTANT: Must be exactly "echo")
 - Database: Select `echo-db` (Database ID: `0f37239d-cd8b-4366-8c88-b11a89076a6e`)
 - Click **Save**
 
@@ -81,5 +81,18 @@ After configuration, your site should work at:
 ### Error: 404 Not Found
 - **Solution**: Make sure all bindings (DB, AI) are configured in Settings → Functions → Bindings
 
-### Error: Database not available
-- **Solution**: Verify the D1 database binding is set up correctly with variable name `DB`
+### Error: Database not available (500 error)
+- **Solution 1**: Verify the D1 database binding is set up correctly:
+  1. Go to **Settings** → **Functions** → **Bindings**
+  2. Check that binding name is exactly `echo` (not `DB`)
+  3. Verify the database is selected: `echo-db`
+  4. If missing, add the binding with variable name `echo`
+  
+- **Solution 2**: Check if database tables exist:
+  1. Run migrations: `pnpm db:migrate` or `wrangler d1 execute echo-db --file=./scripts/setup-d1-database.sql`
+  2. Verify tables exist: `wrangler d1 execute echo-db --command="SELECT name FROM sqlite_master WHERE type='table'"`
+  
+- **Solution 3**: Use the health check endpoint:
+  1. Visit `/api/health` in your browser or use curl
+  2. Check the response for database status and table information
+  3. Look for specific error messages that indicate what's wrong

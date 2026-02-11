@@ -58,9 +58,9 @@ export function GifPicker({ onSelect }: GifPickerProps) {
     try {
       setIsLoading(true)
       const response = await fetch('/api/giphy?endpoint=trending&limit=20')
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; gifs?: any[] }
 
-      if (data.success) {
+      if (data.success && data.gifs) {
         setGifs(data.gifs)
       }
     } catch (error) {
@@ -74,9 +74,9 @@ export function GifPicker({ onSelect }: GifPickerProps) {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/giphy?q=${encodeURIComponent(query)}&limit=20`)
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; gifs?: any[] }
 
-      if (data.success) {
+      if (data.success && data.gifs) {
         setGifs(data.gifs)
       }
     } catch (error) {

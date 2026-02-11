@@ -46,13 +46,19 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      const data = await response.json()
+      const data = await response.json() as { 
+        success: boolean
+        messages?: any[]
+        typingUsers?: any[]
+        onlineUsers?: any[]
+        error?: string
+      }
 
       if (data.success) {
         retryCountRef.current = 0 // Reset retry count on success
         setState((prev) => {
           // Update last message ID
-          if (data.messages.length > 0) {
+          if (data.messages && data.messages.length > 0) {
             lastMessageIdRef.current = data.messages[data.messages.length - 1].id
             
             // Merge new messages with existing ones, avoiding duplicates
@@ -126,13 +132,13 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         }),
       })
 
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; message?: any; aiResponse?: any }
 
-      if (data.success) {
+      if (data.success && data.message) {
         // Immediately add the message to state
         setState((prev) => ({
           ...prev,
-          messages: [...prev.messages, data.message],
+          messages: [...prev.messages, data.message!],
         }))
 
         // If there's an AI response, add it too
@@ -140,7 +146,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
           setTimeout(() => {
             setState((prev) => ({
               ...prev,
-              messages: [...prev.messages, data.aiResponse],
+              messages: [...prev.messages, data.aiResponse!],
             }))
           }, 500)
         }
@@ -184,13 +190,13 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         body: JSON.stringify({ messageId, content }),
       })
 
-      const data = await response.json()
+      const data = await response.json() as { success: boolean; message?: { edited_at?: number } }
 
-      if (data.success) {
+      if (data.success && data.message) {
         setState((prev) => ({
           ...prev,
           messages: prev.messages.map((m) =>
-            m.id === messageId ? { ...m, content, edited_at: data.message.edited_at } : m
+            m.id === messageId ? { ...m, content, edited_at: data.message?.edited_at } : m
           ),
         }))
       }
@@ -216,7 +222,7 @@ export function usePolling({ roomCode, userId, enabled = true, interval = 2000 }
         }),
       })
 
-      return await response.json()
+      return await response.json() as { success: boolean; clip?: any }
     } catch (error) {
       console.error('[v0] Clip message error:', error)
       throw error
