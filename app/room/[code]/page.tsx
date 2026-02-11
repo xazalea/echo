@@ -10,7 +10,7 @@ import { ClipsLibrary } from '@/components/clips-library'
 import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
-import { Bookmark, Users, LogOut, Copy, Check, User } from 'lucide-react'
+import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{
@@ -172,7 +172,7 @@ export default function RoomPage({ params }: PageProps) {
         {showUsers && (
           <div className="w-72 border-l border-border/50 bg-card/50 backdrop-blur-sm p-5">
             <div className="mb-5 flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
+              <UserIcon className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold text-foreground">
                 {'Active Users'}
               </h3>
