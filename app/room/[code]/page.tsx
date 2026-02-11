@@ -7,10 +7,12 @@ import { useEffect, useState, useRef, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatInterface } from '@/components/chat-interface'
 import { ClipsLibrary } from '@/components/clips-library'
+import { DMInbox } from '@/components/dm-inbox'
+import { DMToast } from '@/components/dm-toast'
 import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
-import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X } from 'lucide-react'
+import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X, Mail } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{
@@ -26,9 +28,12 @@ export default function RoomPage({ params }: PageProps) {
   const [users, setUsers] = useState<User[]>([])
   const [showClips, setShowClips] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
+  const [showDMs, setShowDMs] = useState(false)
   const [copied, setCopied] = useState(false)
   const [expiresAt] = useState(new Date(Date.now() + 60 * 60 * 1000))
+  const [newDMToast, setNewDMToast] = useState<any>(null)
   const notificationPermissionRequested = useRef(false)
+  const lastDMCheckRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const storedUser = localStorage.getItem('echo_user')
@@ -51,6 +56,31 @@ export default function RoomPage({ params }: PageProps) {
       isTyping: false
     }
     setUsers([newUser])
+
+    // Poll for new DMs every 10 seconds
+    const dmPollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/dm?userId=${userData.userId}`)
+        const data = await response.json()
+        
+        if (data.success && data.messages && data.messages.length > 0) {
+          // Check for new DMs since last check
+          const newDMs = data.messages.filter((dm: any) => 
+            dm.created_at > lastDMCheckRef.current && dm.to_user_id === userData.userId
+          )
+          
+          if (newDMs.length > 0) {
+            // Show toast for the most recent DM
+            setNewDMToast(newDMs[0])
+            lastDMCheckRef.current = Date.now()
+          }
+        }
+      } catch (error) {
+        console.error('[v0] Error polling DMs:', error)
+      }
+    }, 10000)
+
+    return () => clearInterval(dmPollInterval)
   }, [resolvedParams.code, router])
 
   const handleCopyCode = async () => {
@@ -97,7 +127,7 @@ export default function RoomPage({ params }: PageProps) {
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => { setShowUsers(!showUsers); setShowClips(false) }}
+              onClick={() => { setShowUsers(!showUsers); setShowClips(false); setShowDMs(false) }}
               className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs transition-colors ${
                 showUsers 
                   ? 'bg-muted/40 text-foreground' 
@@ -108,7 +138,7 @@ export default function RoomPage({ params }: PageProps) {
               <span className="font-medium">{users.length}</span>
             </button>
             <button
-              onClick={() => { setShowClips(!showClips); setShowUsers(false) }}
+              onClick={() => { setShowClips(!showClips); setShowUsers(false); setShowDMs(false) }}
               className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs transition-colors ${
                 showClips 
                   ? 'bg-muted/40 text-foreground' 
@@ -117,6 +147,17 @@ export default function RoomPage({ params }: PageProps) {
             >
               <Bookmark className="h-3.5 w-3.5" />
               <span className="font-medium">Clips</span>
+            </button>
+            <button
+              onClick={() => { setShowDMs(!showDMs); setShowUsers(false); setShowClips(false) }}
+              className={`flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs transition-colors ${
+                showDMs 
+                  ? 'bg-muted/40 text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span className="font-medium">DMs</span>
             </button>
             <div className="h-4 w-px bg-border/20 mx-0.5" />
             <button
@@ -188,7 +229,27 @@ export default function RoomPage({ params }: PageProps) {
             </div>
           </div>
         )}
+
+        {/* DMs Sidebar */}
+        {showDMs && user && (
+          <div className="w-80 border-l border-border/30 bg-card/30 backdrop-blur-sm flex-shrink-0">
+            <DMInbox userId={user.userId} onClose={() => setShowDMs(false)} />
+          </div>
+        )}
       </div>
+
+      {/* DM Toast Notification */}
+      {user && (
+        <DMToast
+          message={newDMToast}
+          onDismiss={() => setNewDMToast(null)}
+          onView={() => {
+            setShowDMs(true)
+            setShowClips(false)
+            setShowUsers(false)
+          }}
+        />
+      )}
     </div>
   )
 }

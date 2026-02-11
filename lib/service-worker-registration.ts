@@ -44,16 +44,27 @@ export async function requestNotificationPermission(): Promise<boolean> {
     return false
   }
 
+  // Check if already granted - permission persists automatically
   if (Notification.permission === 'granted') {
     return true
   }
 
-  if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission()
-    return permission === 'granted'
+  // Don't ask if user already denied
+  if (Notification.permission === 'denied') {
+    return false
   }
 
-  return false
+  // Only ask once per session to avoid annoying the user
+  const hasAskedThisSession = sessionStorage.getItem('echo_notification_asked')
+  if (hasAskedThisSession) {
+    return false
+  }
+
+  // Request permission (browser will remember this choice)
+  sessionStorage.setItem('echo_notification_asked', 'true')
+  const permission = await Notification.requestPermission()
+  
+  return permission === 'granted'
 }
 
 export async function sendNotificationToServiceWorker(

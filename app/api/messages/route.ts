@@ -113,6 +113,8 @@ export async function POST(request: NextRequest) {
         })
 
         if (!aiResponse.ok) {
+          const errorText = await aiResponse.text()
+          console.error(`[v0] OpenRouter API error: ${aiResponse.status}`, errorText)
           throw new Error(`OpenRouter API error: ${aiResponse.status}`)
         }
 
@@ -139,7 +141,12 @@ export async function POST(request: NextRequest) {
         })
       } catch (aiError) {
         console.error('[v0] AI response error:', aiError)
-        // Continue without AI response
+        // Return success with just the user message, AI failed
+        return NextResponse.json({
+          success: true,
+          message,
+          aiError: (aiError as Error).message,
+        })
       }
     }
 

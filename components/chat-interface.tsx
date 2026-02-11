@@ -164,7 +164,7 @@ export function ChatInterface({
     if (!message) return
 
     try {
-      if (!clipped) {
+      if (clipped) {
         await clipMessage(messageId, message.content, message.username)
         
         const messageEl = document.querySelector(`[data-message-id="${messageId}"]`)
