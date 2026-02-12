@@ -38,15 +38,17 @@ export function RoomTabs({ rooms, onSelectRoom, onCloseRoom, onNewRoom }: RoomTa
                 {room.unreadCount > 9 ? '9+' : room.unreadCount}
               </span>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onCloseRoom(room.code)
-              }}
-              className="ml-1 h-4 w-4 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            {room.code !== 'ECHO' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCloseRoom(room.code)
+                }}
+                className="ml-1 h-4 w-4 rounded flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         ))}
         <Button

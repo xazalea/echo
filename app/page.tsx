@@ -59,15 +59,22 @@ export default function Home() {
 
   const handleJoinRoom = async () => {
     if (!roomCode.trim() || !username.trim() || loading) return
-    setLoading(true)
     
+    // Prevent joining the reserved "echo" room
+    if (roomCode.toUpperCase() === 'ECHO') {
+      alert('The code "ECHO" is reserved. Please use a different code.')
+      return
+    }
+    
+    setLoading(true)
+
     const userId = generateUserId()
     localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
-    
+
     try {
       const response = await fetch(`/api/rooms?code=${roomCode.toUpperCase()}`)
       const data = await response.json() as { success: boolean; room?: { code: string }; error?: string }
-      
+
       if (data.success) {
         await fetch('/api/join', {
           method: 'POST',
@@ -160,21 +167,46 @@ export default function Home() {
           </div>
 
           {/* Actions */}
-          <div className="space-y-2.5">
-            <button
-              onClick={() => setMode('create')}
-              className="h-12 w-full rounded-lg border border-border/30 bg-card/50 text-foreground transition-all hover:border-border/50 hover:bg-card flex items-center justify-center gap-2.5 text-sm font-medium"
-            >
-              <Plus className="h-4 w-4 text-muted-foreground" />
-              Create Room
-            </button>
-            <button
-              onClick={() => setMode('join')}
-              className="h-12 w-full rounded-lg border border-border/30 bg-card/50 text-foreground transition-all hover:border-border/50 hover:bg-card flex items-center justify-center gap-2.5 text-sm font-medium"
-            >
-              <LogIn className="h-4 w-4 text-muted-foreground" />
-              Join Room
-            </button>
+          <div className="space-y-3">
+            {/* Echo Universal Room - Featured */}
+            <div className="relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-lg blur opacity-75"></div>
+              <button
+                onClick={() => {
+                  if (!storedUser) {
+                    const tempUsername = prompt('Enter your username to join Echo:')
+                    if (tempUsername?.trim()) {
+                      const userId = generateUserId()
+                      localStorage.setItem('echo_user', JSON.stringify({ userId, username: tempUsername.trim() }))
+                      router.push('/room/ECHO')
+                    }
+                  } else {
+                    router.push('/room/ECHO')
+                  }
+                }}
+                className="relative h-14 w-full rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-purple-500/10 text-foreground transition-all hover:border-primary/50 hover:from-primary/15 hover:to-purple-500/15 flex flex-col items-center justify-center gap-1 font-medium"
+              >
+                <span className="text-base">🌍 Join Echo</span>
+                <span className="text-[10px] text-muted-foreground/60">Universal Chat Room</span>
+              </button>
+            </div>
+            
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setMode('create')}
+                className="h-11 flex-1 rounded-lg border border-border/30 bg-card/50 text-foreground transition-all hover:border-border/50 hover:bg-card flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                Create
+              </button>
+              <button
+                onClick={() => setMode('join')}
+                className="h-11 flex-1 rounded-lg border border-border/30 bg-card/50 text-foreground transition-all hover:border-border/50 hover:bg-card flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <LogIn className="h-4 w-4 text-muted-foreground" />
+                Join
+              </button>
+            </div>
           </div>
 
           {/* Footer */}

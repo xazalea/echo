@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { MessageBubble } from './message-bubble'
 import { ChatInput } from './chat-input'
 import { TypingIndicator } from './typing-indicator'
+import { VoiceChat } from './voice-chat'
 import { usePolling } from '@/hooks/use-polling'
 import type { Message, User } from '@/lib/types'
 import { getTimeRemaining, showNotification } from '@/lib/chat-utils'
@@ -198,6 +199,9 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
 
   return (
     <div className="relative flex h-full flex-col bg-background">
+      {/* Voice Chat */}
+      <VoiceChat roomCode={roomCode} userId={userId} username={username} />
+      
       {/* Status Bar */}
       <div className="border-b border-border/30 bg-card/60 backdrop-blur-md px-5 py-2">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-xs">

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Bookmark, Edit2, Check, X, BookmarkCheck, Reply, SmilePlus, CornerDownRight } from 'lucide-react'
 import type { Message } from '@/lib/types'
-import { formatTimestamp, saveClippedMessage } from '@/lib/chat-utils'
+import { formatTimestamp, saveClippedMessage, getClippedMessages, removeClippedMessage } from '@/lib/chat-utils'
 import { UserHoverCard } from './user-hover-card'
 import {
   Popover,
@@ -26,6 +26,7 @@ interface MessageBubbleProps {
   onReply?: (reply: { id: string; content: string; username: string }) => void
   onReact?: (messageId: string, emoji: string) => void
   currentUserId?: string
+  userProfilePicture?: string
 }
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
@@ -40,13 +41,37 @@ export function MessageBubble({
   onReply,
   onReact,
   currentUserId,
+  userProfilePicture,
 }: MessageBubbleProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const [showReactions, setShowReactions] = useState(false)
-  const isClipped = (message.clippedBy?.length ?? 0) > 0
+  const [isClipped, setIsClipped] = useState(false)
+  const [clipAnimating, setClipAnimating] = useState(false)
+  const [profilePic, setProfilePic] = useState<string | null>(userProfilePicture || null)
   const reactions = message.reactions || {}
   const hasReactions = Object.keys(reactions).length > 0
+
+  // Check if message is clipped in localStorage
+  useEffect(() => {
+    const clips = getClippedMessages()
+    setIsClipped(clips.some(c => c.messageId === message.id))
+  }, [message.id])
+
+  // Fetch profile picture for this user
+  useEffect(() => {
+    if (!isOwn && message.user_id) {
+      fetch(`/api/profile-picture?userId=${message.user_id}`)
+        .then(res => res.json())
+        .then((data) => {
+          const typedData = data as { success: boolean; picture?: { dataUrl: string } }
+          if (typedData.success && typedData.picture) {
+            setProfilePic(typedData.picture.dataUrl)
+          }
+        })
+        .catch(error => console.error('Error fetching profile picture:', error))
+    }
+  }, [message.user_id, isOwn])
 
   const handleSaveEdit = () => {
     if (editContent.trim() && editContent !== message.content) {
@@ -63,12 +88,19 @@ export function MessageBubble({
   const handleClip = () => {
     console.log('[MessageBubble] Clip button clicked', { messageId: message.id, isClipped, roomCode })
     const nowClipped = !isClipped
-    onToggleClip(message.id, nowClipped)
     
     if (nowClipped) {
       console.log('[MessageBubble] Saving clip to localStorage')
       saveClippedMessage(message, roomCode)
+      setIsClipped(true)
+      setClipAnimating(true)
+      setTimeout(() => setClipAnimating(false), 1000)
+    } else {
+      removeClippedMessage(message.id)
+      setIsClipped(false)
     }
+    
+    onToggleClip(message.id, nowClipped)
   }
 
   const handleReaction = (emoji: string) => {
@@ -88,14 +120,20 @@ export function MessageBubble({
         {/* Avatar column */}
         <div className="w-9 flex-shrink-0">
           {showAvatar ? (
-            <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm ${
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm overflow-hidden ${
               isAI 
                 ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white' 
                 : isOwn 
                   ? 'bg-gradient-to-br from-foreground/20 to-foreground/10 text-foreground ring-1 ring-foreground/20' 
                   : 'bg-gradient-to-br from-muted to-muted/60 text-foreground ring-1 ring-border/30'
             }`}>
-              {isAI ? '🤖' : message.username.charAt(0).toUpperCase()}
+              {profilePic ? (
+                <img src={profilePic} alt={message.username} className="h-full w-full object-cover" />
+              ) : isAI ? (
+                '🤖'
+              ) : (
+                message.username.charAt(0).toUpperCase()
+              )}
             </div>
           ) : null}
         </div>
@@ -277,20 +315,20 @@ export function MessageBubble({
                 </button>
               )}
 
-              {/* Clip (other's messages) */}
-              {!isOwn && (
-                <button
-                  onClick={handleClip}
-                  className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${
-                    isClipped 
-                      ? 'text-foreground' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                  title={isClipped ? 'Clipped' : 'Clip'}
-                >
-                  {isClipped ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
-                </button>
-              )}
+              {/* Clip */}
+              <button
+                onClick={handleClip}
+                className={`h-6 w-6 rounded flex items-center justify-center transition-all ${
+                  clipAnimating ? 'scale-125 bg-primary/20' : ''
+                } ${
+                  isClipped 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+                title={isClipped ? 'Unclip' : 'Clip message'}
+              >
+                {isClipped ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+              </button>
             </div>
           </div>
         )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   HoverCard,
   HoverCardContent,
@@ -17,6 +17,21 @@ interface UserHoverCardProps {
 
 export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
   const [showDMOverlay, setShowDMOverlay] = useState(false)
+  const [profilePic, setProfilePic] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`/api/profile-picture?userId=${userId}`)
+        .then(res => res.json())
+        .then((data) => {
+          const typedData = data as { success: boolean; picture?: { dataUrl: string } }
+          if (typedData.success && typedData.picture) {
+            setProfilePic(typedData.picture.dataUrl)
+          }
+        })
+        .catch(error => console.error('Error fetching profile picture:', error))
+    }
+  }, [userId])
 
   return (
     <>
@@ -29,8 +44,12 @@ export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
         <HoverCardContent className="w-56 border-border/30 bg-card p-3" align="start" side="top">
           <div className="space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/40 border border-border/30 text-xs font-semibold text-foreground/80">
-                {username.charAt(0).toUpperCase()}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/40 border border-border/30 text-xs font-semibold text-foreground/80 overflow-hidden">
+                {profilePic ? (
+                  <img src={profilePic} alt={username} className="h-full w-full object-cover" />
+                ) : (
+                  username.charAt(0).toUpperCase()
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">{username}</p>
