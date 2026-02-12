@@ -1,4 +1,4 @@
-name = "echo-chat"
+name = "echoxx"
 compatibility_date = "2024-01-01"
 # Note: Do NOT set compatibility_flags here or in dashboard
 # The @cloudflare/next-on-pages adapter manages compatibility flags automatically

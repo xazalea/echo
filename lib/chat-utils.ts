@@ -66,14 +66,19 @@ function generateShareCode(): string {
 }
 
 export function saveClippedMessage(message: Message, roomCode: string): void {
+  console.log('[chat-utils] saveClippedMessage called', { messageId: message.id, roomCode })
   const now = Date.now()
+  const messageTimestamp = message.timestamp instanceof Date 
+    ? message.timestamp.getTime() 
+    : (message.created_at || message.timestamp || now)
+  
   const clipped = {
     id: message.id,
     messageId: message.id,
     content: message.content,
     username: message.username,
     roomCode,
-    timestamp: message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp, // Exact timestamp in milliseconds
+    timestamp: messageTimestamp, // Exact timestamp in milliseconds
     clippedAt: now, // Exact timestamp when clipped in milliseconds
     type: message.type || 'text',
     imageUrl: message.imageUrl,
@@ -81,12 +86,16 @@ export function saveClippedMessage(message: Message, roomCode: string): void {
   }
   
   const clips = getClippedMessages()
+  console.log('[chat-utils] Current clips in localStorage:', clips.length)
   
   // Check if already clipped
   const exists = clips.find(c => c.messageId === message.id)
   if (!exists) {
     clips.push(clipped)
     localStorage.setItem('echo_clips', JSON.stringify(clips))
+    console.log('[chat-utils] Clip saved successfully. Total clips:', clips.length)
+  } else {
+    console.log('[chat-utils] Message already clipped')
   }
 }
 

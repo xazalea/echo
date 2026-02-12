@@ -10,11 +10,12 @@ import { ClipsLibrary } from '@/components/clips-library'
 import { DMInbox } from '@/components/dm-inbox'
 import { DMToast } from '@/components/dm-toast'
 import { RoomTabs } from '@/components/room-tabs'
+import { ProfilePictureUpload } from '@/components/profile-picture-upload'
 import { useRoomManager } from '@/hooks/use-room-manager'
 import type { Message, User } from '@/lib/types'
 import { requestNotificationPermission, showNotification } from '@/lib/chat-utils'
 import { Button } from '@/components/ui/button'
-import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X, Mail, User } from 'lucide-react'
+import { Bookmark, Users, LogOut, Copy, Check, User as UserIcon, X, Mail } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{
@@ -54,7 +55,7 @@ export default function RoomPage({ params }: PageProps) {
     // Load profile picture
     fetch(`/api/profile-picture?userId=${userData.userId}`)
       .then(res => res.json())
-      .then(data => {
+      .then((data: any) => {
         if (data.success && data.picture) {
           setProfilePicture(data.picture.dataUrl)
         }
@@ -128,7 +129,7 @@ export default function RoomPage({ params }: PageProps) {
         body: JSON.stringify({ userId: user.userId, dataUrl }),
       })
       
-      const data = await response.json()
+      const data = await response.json() as { success: boolean }
       if (data.success) {
         setProfilePicture(dataUrl)
       }
@@ -171,11 +172,11 @@ export default function RoomPage({ params }: PageProps) {
             onClick={() => setShowProfileUpload(true)}
             className="absolute top-2.5 left-4 z-20 h-8 w-8 rounded-full border-2 border-border/30 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all flex items-center justify-center overflow-hidden"
           >
-            {profilePicture ? (
-              <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
-            ) : (
-              <User className="h-4 w-4 text-muted-foreground" />
-            )}
+          {profilePicture ? (
+            <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
+          ) : (
+            <UserIcon className="h-4 w-4 text-muted-foreground" />
+          )}
           </button>
           <div className="flex items-center gap-3">
             <h1 className="font-light text-xl tracking-tight text-foreground">

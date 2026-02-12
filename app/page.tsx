@@ -26,7 +26,7 @@ export default function Home() {
       const { userId } = JSON.parse(storedUser)
       fetch(`/api/profile-picture?userId=${userId}`)
         .then(res => res.json())
-        .then(data => {
+        .then((data: any) => {
           if (data.success && data.picture) {
             setProfilePicture(data.picture.dataUrl)
           }
@@ -48,7 +48,7 @@ export default function Home() {
         body: JSON.stringify({ userId, dataUrl }),
       })
       
-      const data = await response.json()
+      const data = await response.json() as { success: boolean }
       if (data.success) {
         setProfilePicture(dataUrl)
       }
@@ -127,21 +127,26 @@ export default function Home() {
   }
 
   if (mode === 'home') {
+    // Check if user exists
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('echo_user') : null
+    
     return (
       <div className="relative flex min-h-screen items-center justify-center p-4 bg-background overflow-hidden">
         <div className="absolute inset-0 bg-gradient-enhanced" />
         
-        {/* Profile Picture Button - Top Left */}
-        <button
-          onClick={() => setShowProfileUpload(true)}
-          className="absolute top-4 left-4 z-20 h-10 w-10 rounded-full border-2 border-border/30 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all flex items-center justify-center overflow-hidden"
-        >
-          {profilePicture ? (
-            <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
-          ) : (
-            <User className="h-5 w-5 text-muted-foreground" />
-          )}
-        </button>
+        {/* Profile Picture Button - Top Left (only show if user exists) */}
+        {storedUser && (
+          <button
+            onClick={() => setShowProfileUpload(true)}
+            className="absolute top-4 left-4 z-20 h-10 w-10 rounded-full border-2 border-border/30 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all flex items-center justify-center overflow-hidden"
+          >
+            {profilePicture ? (
+              <img src={profilePicture} alt="Profile" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
+        )}
         
         <div className="relative z-10 w-full max-w-sm space-y-10">
           {/* Logo */}

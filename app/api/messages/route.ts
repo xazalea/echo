@@ -9,7 +9,7 @@ interface CloudflareEnv {
   echo?: D1Database
 }
 
-const OPENROUTER_API_KEY = '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'
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const VENICE_MODEL = 'openai/gpt-4o'
 

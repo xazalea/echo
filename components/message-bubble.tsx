@@ -23,7 +23,7 @@ interface MessageBubbleProps {
   onToggleClip: (messageId: string, clipped: boolean) => void
   roomCode: string
   showAvatar?: boolean
-  onReply?: (messageId: string) => void
+  onReply?: (reply: { id: string; content: string; username: string }) => void
   onReact?: (messageId: string, emoji: string) => void
   currentUserId?: string
 }
@@ -61,10 +61,12 @@ export function MessageBubble({
   }
 
   const handleClip = () => {
+    console.log('[MessageBubble] Clip button clicked', { messageId: message.id, isClipped, roomCode })
     const nowClipped = !isClipped
     onToggleClip(message.id, nowClipped)
     
     if (nowClipped) {
+      console.log('[MessageBubble] Saving clip to localStorage')
       saveClippedMessage(message, roomCode)
     }
   }
@@ -256,7 +258,7 @@ export function MessageBubble({
               {/* Reply */}
               {onReply && (
                 <button
-                  onClick={() => onReply(message.id)}
+                  onClick={() => onReply({ id: message.id, content: message.content, username: message.username })}
                   className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   title="Reply"
                 >

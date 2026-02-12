@@ -27,7 +27,7 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
   setMessages,
   users: _users,
   expiresAt
-}: ChatInterfaceProps) {
+}: ChatInterfaceProps, ref) {
   const [timeRemaining, setTimeRemaining] = useState('')
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; username: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -49,6 +49,11 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
     enabled: true,
     interval: 2000
   })
+
+  // Expose sendMessage to parent via ref
+  useImperativeHandle(ref, () => ({
+    sendMessage
+  }))
 
   // Update parent messages state
   useEffect(() => {
@@ -127,15 +132,12 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
     }
   }
 
-  const handleReply = (messageId: string) => {
-    const message = messages.find(m => m.id === messageId)
-    if (message) {
-      setReplyTo({
-        id: messageId,
-        content: message.content.substring(0, 60) + (message.content.length > 60 ? '...' : ''),
-        username: message.username
-      })
-    }
+  const handleReply = (reply: { id: string; content: string; username: string }) => {
+    setReplyTo({
+      id: reply.id,
+      content: reply.content.substring(0, 60) + (reply.content.length > 60 ? '...' : ''),
+      username: reply.username
+    })
   }
 
   const handleReact = async (messageId: string, emoji: string) => {
