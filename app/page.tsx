@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
 import { ProfilePictureUpload } from '@/components/profile-picture-upload'
-import { Plus, LogIn, ArrowLeft, Clock, User } from 'lucide-react'
+import { UsernameModal } from '@/components/username-modal'
+import { Plus, LogIn, ArrowLeft, Clock, User, Globe } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -18,20 +19,21 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [showProfileUpload, setShowProfileUpload] = useState(false)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [usernameModalCallback, setUsernameModalCallback] = useState<((username: string) => void) | null>(null)
 
   useEffect(() => {
     // Load profile picture if user exists
     const storedUser = localStorage.getItem('echo_user')
     if (storedUser) {
       const { userId } = JSON.parse(storedUser)
-      fetch(`/api/profile-picture?userId=${userId}`)
-        .then(res => res.json())
-        .then((data: any) => {
-          if (data.success && data.picture) {
-            setProfilePicture(data.picture.dataUrl)
+      import('@/lib/profile-sync').then(({ fetchProfilePicture }) => {
+        fetchProfilePicture(userId).then(picture => {
+          if (picture) {
+            setProfilePicture(picture)
           }
         })
-        .catch(console.error)
+      })
     }
   }, [])
 
@@ -174,19 +176,23 @@ export default function Home() {
               <button
                 onClick={() => {
                   if (!storedUser) {
-                    const tempUsername = prompt('Enter your username to join Echo:')
-                    if (tempUsername?.trim()) {
+                    setUsernameModalCallback(() => (username: string) => {
                       const userId = generateUserId()
-                      localStorage.setItem('echo_user', JSON.stringify({ userId, username: tempUsername.trim() }))
+                      localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
+                      setShowUsernameModal(false)
                       router.push('/room/ECHO')
-                    }
+                    })
+                    setShowUsernameModal(true)
                   } else {
                     router.push('/room/ECHO')
                   }
                 }}
                 className="relative h-14 w-full rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-purple-500/10 text-foreground transition-all hover:border-primary/50 hover:from-primary/15 hover:to-purple-500/15 flex flex-col items-center justify-center gap-1 font-medium"
               >
-                <span className="text-base">🌍 Join Echo</span>
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-primary" />
+                  <span className="text-base">Join Echo</span>
+                </div>
                 <span className="text-[10px] text-muted-foreground/60">Universal Chat Room</span>
               </button>
             </div>
@@ -350,6 +356,15 @@ export default function Home() {
           currentPicture={profilePicture || undefined}
           onUpload={handleUploadProfilePicture}
           onClose={() => setShowProfileUpload(false)}
+        />
+      )}
+
+      {showUsernameModal && usernameModalCallback && (
+        <UsernameModal
+          onSubmit={usernameModalCallback}
+          onClose={() => setShowUsernameModal(false)}
+          title="Join Echo"
+          subtitle="Enter a username to join the universal chat"
         />
       )}
     </>

@@ -133,7 +133,7 @@ export async function createMessage(
 export async function getMessages(db: D1Database, roomId: string, limit = 100) {
   const result = await db
     .prepare(
-      'SELECT * FROM messages WHERE room_id = ? AND expires_at > ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT ?'
+      'SELECT * FROM messages WHERE room_id = ? AND expires_at > ? AND is_deleted = 0 ORDER BY created_at ASC LIMIT ?'
     )
     .bind(roomId, getTimestamp(), limit)
     .all()

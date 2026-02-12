@@ -128,9 +128,36 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
                     />
                   )}
 
-                  {/* Time */}
-                  <div className="text-[10px] text-muted-foreground/30 mb-2">
-                    {clip.clippedAt ? formatExactTimestamp(clip.clippedAt) : ''}
+                  {/* Metadata - Professional Legal Proof */}
+                  <div className="space-y-1 mb-2 p-2 rounded bg-muted/5 border border-border/10">
+                    <div className="text-[10px] text-muted-foreground/50 space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Original:</span>
+                        <span className="font-mono">{new Date(clip.timestamp).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Clipped:</span>
+                        <span className="font-mono">{new Date(clip.clippedAt).toLocaleString()}</span>
+                      </div>
+                      {clip.clippedBy && (
+                        <div className="flex justify-between">
+                          <span>Clipped by:</span>
+                          <span className="font-medium">{clip.clippedBy}</span>
+                        </div>
+                      )}
+                      {clip.verificationHash && (
+                        <div className="flex justify-between">
+                          <span>Verification:</span>
+                          <span className="font-mono text-primary/70">{clip.verificationHash}</span>
+                        </div>
+                      )}
+                      {clip.shareCode && (
+                        <div className="flex justify-between">
+                          <span>Clip ID:</span>
+                          <span className="font-mono">{clip.shareCode.substring(5, 15)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Actions */}

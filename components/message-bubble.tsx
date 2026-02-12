@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Bookmark, Edit2, Check, X, BookmarkCheck, Reply, SmilePlus, CornerDownRight } from 'lucide-react'
+import { Bookmark, Edit2, Check, X, BookmarkCheck, Reply, SmilePlus, CornerDownRight, ThumbsUp, Heart, Laugh, Frown, Hand, Trash2 } from 'lucide-react'
 import type { Message } from '@/lib/types'
 import { formatTimestamp, saveClippedMessage, getClippedMessages, removeClippedMessage } from '@/lib/chat-utils'
 import { UserHoverCard } from './user-hover-card'
@@ -21,6 +21,7 @@ interface MessageBubbleProps {
   isOwn: boolean
   onEdit: (messageId: string, newContent: string) => void
   onToggleClip: (messageId: string, clipped: boolean) => void
+  onDelete?: (messageId: string) => void
   roomCode: string
   showAvatar?: boolean
   onReply?: (reply: { id: string; content: string; username: string }) => void
@@ -29,13 +30,21 @@ interface MessageBubbleProps {
   userProfilePicture?: string
 }
 
-const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+const EMOJI_REACTIONS = [
+  { emoji: '👍', icon: ThumbsUp, label: 'thumbs up' },
+  { emoji: '❤️', icon: Heart, label: 'heart' },
+  { emoji: '😂', icon: Laugh, label: 'laugh' },
+  { emoji: '😮', icon: Laugh, label: 'wow' }, // Using Laugh as fallback
+  { emoji: '😢', icon: Frown, label: 'sad' },
+  { emoji: '🙏', icon: Hand, label: 'pray' },
+]
 
 export function MessageBubble({
   message,
   isOwn,
   onEdit,
   onToggleClip,
+  onDelete,
   roomCode,
   showAvatar = true,
   onReply,
@@ -49,6 +58,7 @@ export function MessageBubble({
   const [isClipped, setIsClipped] = useState(false)
   const [clipAnimating, setClipAnimating] = useState(false)
   const [profilePic, setProfilePic] = useState<string | null>(userProfilePicture || null)
+  const [canDelete, setCanDelete] = useState(false)
   const reactions = message.reactions || {}
   const hasReactions = Object.keys(reactions).length > 0
 
@@ -60,18 +70,36 @@ export function MessageBubble({
 
   // Fetch profile picture for this user
   useEffect(() => {
-    if (!isOwn && message.user_id) {
-      fetch(`/api/profile-picture?userId=${message.user_id}`)
-        .then(res => res.json())
-        .then((data) => {
-          const typedData = data as { success: boolean; picture?: { dataUrl: string } }
-          if (typedData.success && typedData.picture) {
-            setProfilePic(typedData.picture.dataUrl)
+    const userId = message.user_id || message.userId
+    if (!isOwn && userId) {
+      import('@/lib/profile-sync').then(({ fetchProfilePicture }) => {
+        fetchProfilePicture(userId).then(picture => {
+          if (picture) {
+            setProfilePic(picture)
           }
         })
-        .catch(error => console.error('Error fetching profile picture:', error))
+      })
     }
-  }, [message.user_id, isOwn])
+  }, [message.user_id, message.userId, isOwn])
+
+  // Check if message can be deleted (within 1 minute)
+  useEffect(() => {
+    if (!isOwn) return
+
+    const checkCanDelete = () => {
+      const messageTime = message.timestamp instanceof Date 
+        ? message.timestamp.getTime() 
+        : (message.created_at || Date.now())
+      const now = Date.now()
+      const oneMinute = 60 * 1000
+      setCanDelete(now - messageTime <= oneMinute)
+    }
+
+    checkCanDelete()
+    const interval = setInterval(checkCanDelete, 1000) // Update every second
+
+    return () => clearInterval(interval)
+  }, [isOwn, message.timestamp, message.created_at])
 
   const handleSaveEdit = () => {
     if (editContent.trim() && editContent !== message.content) {
@@ -108,6 +136,14 @@ export function MessageBubble({
     setShowReactions(false)
   }
 
+  const handleDelete = async () => {
+    if (!onDelete || !canDelete) return
+    
+    if (confirm('Delete this message? This cannot be undone.')) {
+      onDelete(message.id)
+    }
+  }
+
   // Check if message is an AI message
   const isAI = message.user_id === 'israelgpt' || message.user_id === 'echo-ai' || message.userId === 'israelgpt' || message.userId === 'echo-ai'
 
@@ -122,15 +158,15 @@ export function MessageBubble({
           {showAvatar ? (
             <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm overflow-hidden ${
               isAI 
-                ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white' 
+                ? 'bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white ring-2 ring-primary/30 animate-pulse-slow' 
                 : isOwn 
                   ? 'bg-gradient-to-br from-foreground/20 to-foreground/10 text-foreground ring-1 ring-foreground/20' 
                   : 'bg-gradient-to-br from-muted to-muted/60 text-foreground ring-1 ring-border/30'
             }`}>
-              {profilePic ? (
+              {isAI ? (
+                <span className="text-base">🇮🇱</span>
+              ) : profilePic ? (
                 <img src={profilePic} alt={message.username} className="h-full w-full object-cover" />
-              ) : isAI ? (
-                '🤖'
               ) : (
                 message.username.charAt(0).toUpperCase()
               )}
@@ -279,15 +315,19 @@ export function MessageBubble({
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-1.5" align="end" side="top">
                     <div className="flex gap-0.5">
-                      {EMOJI_REACTIONS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => handleReaction(emoji)}
-                          className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center text-base transition-transform hover:scale-110"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                      {EMOJI_REACTIONS.map((reaction) => {
+                        const Icon = reaction.icon
+                        return (
+                          <button
+                            key={reaction.emoji}
+                            onClick={() => handleReaction(reaction.emoji)}
+                            className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center transition-transform hover:scale-110"
+                            title={reaction.label}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </button>
+                        )
+                      })}
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -312,6 +352,17 @@ export function MessageBubble({
                   title="Edit"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+
+              {/* Delete (own messages, within 1 minute) */}
+              {isOwn && canDelete && onDelete && (
+                <button
+                  onClick={handleDelete}
+                  className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title="Delete (within 1 min)"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
 

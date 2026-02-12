@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      messages: messages.reverse(), // Return oldest first
+      messages: messages, // Ordered by created_at ASC (oldest first)
     })
   } catch (error) {
     console.error('[v0] Error fetching messages:', error)

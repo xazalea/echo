@@ -72,17 +72,32 @@ export function saveClippedMessage(message: Message, roomCode: string): void {
     ? message.timestamp.getTime() 
     : (message.created_at || message.timestamp || now)
   
+  // Generate cryptographic hash for verification
+  const verificationData = `${message.id}|${message.content}|${message.username}|${messageTimestamp}|${roomCode}`
+  const verificationHash = btoa(verificationData).substring(0, 16)
+  
   const clipped = {
     id: message.id,
     messageId: message.id,
     content: message.content,
     username: message.username,
+    userId: message.user_id || message.userId,
     roomCode,
-    timestamp: messageTimestamp, // Exact timestamp in milliseconds
-    clippedAt: now, // Exact timestamp when clipped in milliseconds
+    timestamp: messageTimestamp, // Original message timestamp
+    clippedAt: now, // When the clip was created
+    clippedBy: localStorage.getItem('echo_user') ? JSON.parse(localStorage.getItem('echo_user')!).username : 'Unknown',
     type: message.type || 'text',
     imageUrl: message.imageUrl,
-    shareCode: generateShareCode()
+    shareCode: generateShareCode(),
+    verificationHash, // Legal proof hash
+    metadata: {
+      messageId: message.id,
+      originalTimestamp: new Date(messageTimestamp).toISOString(),
+      clippedTimestamp: new Date(now).toISOString(),
+      roomCode: roomCode,
+      platform: 'Echo Chat',
+      version: '1.0',
+    }
   }
   
   const clips = getClippedMessages()

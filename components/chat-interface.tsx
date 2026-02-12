@@ -161,6 +161,28 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
     }
   }
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const response = await fetch('/api/messages/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, userId }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json() as { error?: string }
+        alert(errorData.error || 'Failed to delete message')
+        return
+      }
+
+      // Remove message from local state
+      setMessages(messages.filter(m => m.id !== messageId))
+    } catch (error) {
+      console.error('[v0] Error deleting message:', error)
+      alert('Failed to delete message')
+    }
+  }
+
   const handleToggleClip = async (messageId: string, clipped: boolean) => {
     const message = messages.find(m => m.id === messageId)
     if (!message) return
@@ -269,6 +291,7 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
                   isOwn={(message.user_id || message.userId) === userId}
                   onEdit={handleEditMessage}
                   onToggleClip={handleToggleClip}
+                  onDelete={handleDeleteMessage}
                   roomCode={roomCode}
                   showAvatar={showAvatar}
                   onReply={handleReply}

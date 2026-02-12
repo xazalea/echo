@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX, Users } from 'lucide-react'
+import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX, Users, User } from 'lucide-react'
+import { useWebRTCVoice } from '@/hooks/use-webrtc-voice'
+import { fetchProfilePicture } from '@/lib/profile-sync'
 
 interface VoiceChatProps {
   roomCode: string
@@ -11,73 +13,48 @@ interface VoiceChatProps {
 }
 
 export function VoiceChat({ roomCode, userId, username }: VoiceChatProps) {
-  const [isConnected, setIsConnected] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false)
-  const [participants, setParticipants] = useState<string[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
+  const [participantPictures, setParticipantPictures] = useState<Record<string, string | null>>({})
   
-  const localStreamRef = useRef<MediaStream | null>(null)
-  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const {
+    isConnected,
+    isMuted,
+    participants,
+    error,
+    connect,
+    disconnect,
+    toggleMute
+  } = useWebRTCVoice({
+    roomCode,
+    userId,
+    username,
+    enabled: true
+  })
+
+  // Fetch profile pictures for participants
+  useEffect(() => {
+    participants.forEach(async (participant) => {
+      if (!participantPictures[participant.userId]) {
+        const picture = await fetchProfilePicture(participant.userId)
+        setParticipantPictures(prev => ({
+          ...prev,
+          [participant.userId]: picture
+        }))
+      }
+    })
+  }, [participants])
 
   const toggleConnection = async () => {
     if (isConnected) {
-      // Disconnect
       disconnect()
     } else {
-      // Connect
-      await connect()
-    }
-  }
-
-  const connect = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      localStreamRef.current = stream
-      setIsConnected(true)
-      
-      // TODO: Implement WebRTC signaling via WebSocket
-      console.log('[VoiceChat] Connected to voice chat')
-    } catch (error) {
-      console.error('[VoiceChat] Error connecting:', error)
-      alert('Could not access microphone. Please check permissions.')
-    }
-  }
-
-  const disconnect = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop())
-      localStreamRef.current = null
-    }
-    
-    peerConnectionsRef.current.forEach(pc => pc.close())
-    peerConnectionsRef.current.clear()
-    
-    setIsConnected(false)
-    setParticipants([])
-    console.log('[VoiceChat] Disconnected from voice chat')
-  }
-
-  const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0]
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled
-        setIsMuted(!audioTrack.enabled)
+      try {
+        await connect()
+      } catch (error) {
+        alert('Could not access microphone. Please check permissions.')
       }
     }
   }
-
-  const toggleSpeaker = () => {
-    setIsSpeakerMuted(!isSpeakerMuted)
-    // TODO: Implement speaker mute for all remote streams
-  }
-
-  useEffect(() => {
-    return () => {
-      disconnect()
-    }
-  }, [])
 
   if (!isExpanded && !isConnected) {
     return (
@@ -104,37 +81,64 @@ export function VoiceChat({ roomCode, userId, username }: VoiceChatProps) {
             </span>
           </div>
           
+          {/* Participants List with Profile Pictures */}
           {isConnected && participants.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Users className="h-3.5 w-3.5" />
-              <span>{participants.length + 1} participant{participants.length > 0 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {participants.slice(0, 5).map((participant) => (
+                  <div
+                    key={participant.userId}
+                    className="relative group"
+                    title={participant.username}
+                  >
+                    <div className={`h-7 w-7 rounded-full border-2 border-card bg-muted flex items-center justify-center overflow-hidden ${
+                      participant.isMuted ? 'opacity-50' : ''
+                    }`}>
+                      {participantPictures[participant.userId] ? (
+                        <img 
+                          src={participantPictures[participant.userId]!} 
+                          alt={participant.username}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {participant.username}
+                      {participant.isMuted && ' (muted)'}
+                    </div>
+                  </div>
+                ))}
+                {participants.length > 5 && (
+                  <div className="h-7 w-7 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                    +{participants.length - 5}
+                  </div>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {participants.length + 1}
+              </span>
             </div>
+          )}
+
+          {error && (
+            <span className="text-xs text-red-400">{error}</span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           {isConnected && (
-            <>
-              <Button
-                onClick={toggleMute}
-                variant="ghost"
-                size="sm"
-                className={`h-8 w-8 p-0 ${isMuted ? 'text-red-500 hover:text-red-600' : 'text-foreground'}`}
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
-              
-              <Button
-                onClick={toggleSpeaker}
-                variant="ghost"
-                size="sm"
-                className={`h-8 w-8 p-0 ${isSpeakerMuted ? 'text-red-500 hover:text-red-600' : 'text-foreground'}`}
-                title={isSpeakerMuted ? 'Unmute Speaker' : 'Mute Speaker'}
-              >
-                {isSpeakerMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
-            </>
+            <Button
+              onClick={toggleMute}
+              variant="ghost"
+              size="sm"
+              className={`h-8 w-8 p-0 ${isMuted ? 'text-red-500 hover:text-red-600' : 'text-foreground'}`}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
           )}
           
           <Button

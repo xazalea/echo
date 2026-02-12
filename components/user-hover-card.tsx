@@ -21,15 +21,13 @@ export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
 
   useEffect(() => {
     if (userId) {
-      fetch(`/api/profile-picture?userId=${userId}`)
-        .then(res => res.json())
-        .then((data) => {
-          const typedData = data as { success: boolean; picture?: { dataUrl: string } }
-          if (typedData.success && typedData.picture) {
-            setProfilePic(typedData.picture.dataUrl)
+      import('@/lib/profile-sync').then(({ fetchProfilePicture }) => {
+        fetchProfilePicture(userId).then(picture => {
+          if (picture) {
+            setProfilePic(picture)
           }
         })
-        .catch(error => console.error('Error fetching profile picture:', error))
+      })
     }
   }, [userId])
 
@@ -59,7 +57,7 @@ export function UserHoverCard({ username, userId, isOwn }: UserHoverCardProps) {
               </div>
             </div>
 
-            {!isOwn && (
+            {!isOwn && userId !== 'israelgpt' && userId !== 'echo-ai' && (
               <button
                 onClick={() => setShowDMOverlay(true)}
                 className="w-full flex items-center justify-center gap-2 h-8 rounded-md border border-border/30 bg-transparent text-foreground/70 hover:bg-muted/30 hover:text-foreground text-xs font-medium transition-colors"

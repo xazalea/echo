@@ -53,14 +53,13 @@ export default function RoomPage({ params }: PageProps) {
     setUser(userData)
     
     // Load profile picture
-    fetch(`/api/profile-picture?userId=${userData.userId}`)
-      .then(res => res.json())
-      .then((data: any) => {
-        if (data.success && data.picture) {
-          setProfilePicture(data.picture.dataUrl)
+    import('@/lib/profile-sync').then(({ fetchProfilePicture }) => {
+      fetchProfilePicture(userData.userId).then(picture => {
+        if (picture) {
+          setProfilePicture(picture)
         }
       })
-      .catch(console.error)
+    })
 
     if (!notificationPermissionRequested.current) {
       notificationPermissionRequested.current = true
@@ -121,16 +120,12 @@ export default function RoomPage({ params }: PageProps) {
 
   const handleUploadProfilePicture = async (dataUrl: string) => {
     if (!user) return
-    
+
     try {
-      const response = await fetch('/api/profile-picture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.userId, dataUrl }),
-      })
+      const { syncProfilePicture } = await import('@/lib/profile-sync')
+      const success = await syncProfilePicture(user.userId, dataUrl)
       
-      const data = await response.json() as { success: boolean }
-      if (data.success) {
+      if (success) {
         setProfilePicture(dataUrl)
       }
     } catch (error) {

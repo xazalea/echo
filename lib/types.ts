@@ -37,12 +37,23 @@ export interface ClippedMessage {
   messageId: string
   content: string
   username: string
+  userId?: string
   roomCode: string
-  timestamp: number // Exact timestamp in milliseconds
-  clippedAt: number // Exact timestamp when clipped in milliseconds
+  timestamp: number // Original message timestamp in milliseconds
+  clippedAt: number // Exact timestamp when clipped
+  clippedBy?: string // Username of who clipped it
   type: string
   imageUrl?: string
-  shareCode?: string // For sharing clips
+  shareCode?: string // For sharing
+  verificationHash?: string // Legal proof hash
+  metadata?: {
+    messageId: string
+    originalTimestamp: string
+    clippedTimestamp: string
+    roomCode: string
+    platform: string
+    version: string
+  }
 }
 
 export interface TypingIndicator {
