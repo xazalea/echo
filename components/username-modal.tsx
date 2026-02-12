@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { X } from 'lucide-react'
+import { X, Palette } from 'lucide-react'
 
 interface UsernameModalProps {
-  onSubmit: (username: string) => void
+  onSubmit: (username: string, color?: string) => void
   onClose: () => void
   title?: string
   subtitle?: string
@@ -15,11 +15,22 @@ interface UsernameModalProps {
 
 export function UsernameModal({ onSubmit, onClose, title = 'Enter Username', subtitle }: UsernameModalProps) {
   const [username, setUsername] = useState('')
+  const [showColorPicker, setShowColorPicker] = useState(false)
+  const [selectedColor, setSelectedColor] = useState('#3b82f6')
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value)
+    // Check if username ends with #$
+    if (value.endsWith('#$')) {
+      setShowColorPicker(true)
+      setUsername(value.slice(0, -2)) // Remove #$ from display
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (username.trim()) {
-      onSubmit(username.trim())
+      onSubmit(username.trim(), showColorPicker ? selectedColor : undefined)
     }
   }
 
@@ -54,16 +65,44 @@ export function UsernameModal({ onSubmit, onClose, title = 'Enter Username', sub
                   id="username"
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
                   placeholder="Enter your username"
                   className="h-10 bg-background/50"
                   autoFocus
-                  maxLength={20}
+                  maxLength={22}
                 />
                 <p className="text-xs text-muted-foreground/60">
-                  Choose a name others will see in the chat
+                  Add #$ at the end to choose a name color
                 </p>
               </div>
+
+              {showColorPicker && (
+                <div className="space-y-2 p-3 rounded-md border border-border/30 bg-background/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Palette className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-medium text-foreground/90">
+                      Choose Name Color
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={selectedColor}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      className="h-10 w-20 rounded cursor-pointer bg-transparent"
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                      <p 
+                        className="text-sm font-semibold"
+                        style={{ color: selectedColor }}
+                      >
+                        {username || 'Your Name'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2">
                 <Button

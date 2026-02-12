@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { generateRoomCode, generateUserId } from '@/lib/chat-utils'
 import { ProfilePictureUpload } from '@/components/profile-picture-upload'
 import { UsernameModal } from '@/components/username-modal'
-import { Plus, LogIn, ArrowLeft, Clock, User, Globe } from 'lucide-react'
+import { Plus, LogIn, ArrowLeft, Clock, User, Globe, X } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -78,6 +78,14 @@ export default function Home() {
       localStorage.setItem('echo_recent_rooms', JSON.stringify(rooms))
       setRecentRooms(rooms)
     }
+  }
+
+  const removeFromRecentRooms = (code: string) => {
+    const recent = localStorage.getItem('echo_recent_rooms')
+    const rooms = recent ? JSON.parse(recent) : []
+    const filtered = rooms.filter((r: string) => r !== code)
+    localStorage.setItem('echo_recent_rooms', JSON.stringify(filtered))
+    setRecentRooms(filtered)
   }
 
   const handleJoinRoom = async () => {
@@ -199,26 +207,26 @@ export default function Home() {
           <div className="space-y-3">
             {/* Echo Universal Room - Featured with Fancy Button */}
             <div className="relative flex justify-center">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
+              <div
+                onClick={() => {
+                  console.log('Echo button clicked!')
                   addToRecentRooms('ECHO')
                   const user = localStorage.getItem('echo_user')
                   if (!user) {
-                    setUsernameModalCallback(() => (username: string) => {
+                    setUsernameModalCallback(() => (username: string, color?: string) => {
                       const userId = generateUserId()
-                      localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
+                      localStorage.setItem('echo_user', JSON.stringify({ userId, username, nameColor: color }))
                       setShowUsernameModal(false)
-                      window.location.href = '/room/ECHO'
+                      setTimeout(() => {
+                        window.location.href = '/room/ECHO'
+                      }, 100)
                     })
                     setShowUsernameModal(true)
                   } else {
                     window.location.href = '/room/ECHO'
                   }
                 }}
-                className="echo-fancy-button"
+                className="echo-fancy-button cursor-pointer"
               >
                 <span className="echo-button-text">
                   <span className="flex items-center gap-2">
@@ -230,7 +238,7 @@ export default function Home() {
                 <span className="echo-blob"></span>
                 <span className="echo-blob"></span>
                 <span className="echo-blob"></span>
-              </button>
+              </div>
             </div>
             
             <div className="flex gap-2.5">
@@ -257,30 +265,46 @@ export default function Home() {
               <h3 className="text-xs font-medium text-muted-foreground/60 px-1">Recent Rooms</h3>
               <div className="flex flex-wrap gap-2">
                 {recentRooms.map((code) => (
-                  <button
+                  <div
                     key={code}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      const user = localStorage.getItem('echo_user')
-                      if (!user) {
-                        setUsernameModalCallback(() => (username: string) => {
-                          const userId = generateUserId()
-                          localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
-                          setShowUsernameModal(false)
-                          window.location.href = `/room/${code}`
-                        })
-                        setShowUsernameModal(true)
-                      } else {
-                        window.location.href = `/room/${code}`
-                      }
-                    }}
-                    className="h-8 px-3 rounded-md border border-border/30 bg-card/30 text-foreground/80 hover:bg-card/50 hover:border-border/50 transition-all text-xs font-medium flex items-center gap-1.5"
+                    className="h-8 px-3 rounded-md border border-border/30 bg-card/30 text-foreground/80 hover:bg-card/50 hover:border-border/50 transition-all text-xs font-medium flex items-center gap-1.5 group"
                   >
-                    {code === 'ECHO' && <Globe className="h-3 w-3 text-primary" />}
-                    {code}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('Recent room clicked:', code)
+                        const user = localStorage.getItem('echo_user')
+                        if (!user) {
+                          setUsernameModalCallback(() => (username: string, color?: string) => {
+                            const userId = generateUserId()
+                            localStorage.setItem('echo_user', JSON.stringify({ userId, username, nameColor: color }))
+                            setShowUsernameModal(false)
+                            setTimeout(() => {
+                              window.location.href = `/room/${code}`
+                            }, 100)
+                          })
+                          setShowUsernameModal(true)
+                        } else {
+                          window.location.href = `/room/${code}`
+                        }
+                      }}
+                      className="flex items-center gap-1.5"
+                    >
+                      {code === 'ECHO' && <Globe className="h-3 w-3 text-primary" />}
+                      {code}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeFromRecentRooms(code)
+                      }}
+                      className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
+                      title="Remove from recent"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

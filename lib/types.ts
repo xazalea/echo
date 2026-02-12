@@ -16,6 +16,7 @@ export interface Message {
   reactions?: Record<string, string[]> // { emoji: [userId1, userId2] }
   readBy?: string[] // Array of user IDs who read this
   deliveryStatus?: 'sending' | 'sent' | 'delivered' | 'read' // Delivery status
+  name_color?: string // Custom name color
 }
 
 export interface User {
