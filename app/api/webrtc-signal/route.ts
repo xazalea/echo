@@ -34,6 +34,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing roomCode or userId' }, { status: 400 })
     }
 
+    // Ensure table exists
+    try {
+      await db.prepare(
+        `CREATE TABLE IF NOT EXISTS webrtc_signals (
+          id TEXT PRIMARY KEY,
+          room_code TEXT NOT NULL,
+          from_user_id TEXT NOT NULL,
+          to_user_id TEXT NOT NULL,
+          signal_type TEXT NOT NULL,
+          signal_data TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        )`
+      ).run()
+    } catch (e) {
+      console.error('[WebRTC Signal] Table creation warning:', e)
+    }
+
     // Store signal in database for retrieval
     const signalId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
@@ -91,6 +108,23 @@ export async function GET(request: NextRequest) {
 
     if (!roomCode || !userId) {
       return NextResponse.json({ error: 'Missing roomCode or userId' }, { status: 400 })
+    }
+
+    // Ensure table exists
+    try {
+      await db.prepare(
+        `CREATE TABLE IF NOT EXISTS webrtc_signals (
+          id TEXT PRIMARY KEY,
+          room_code TEXT NOT NULL,
+          from_user_id TEXT NOT NULL,
+          to_user_id TEXT NOT NULL,
+          signal_type TEXT NOT NULL,
+          signal_data TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        )`
+      ).run()
+    } catch (e) {
+      console.error('[WebRTC Signal] Table creation warning:', e)
     }
 
     // Get signals for this user (targeted to them or broadcast)

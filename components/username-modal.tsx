@@ -15,15 +15,25 @@ interface UsernameModalProps {
 
 export function UsernameModal({ onSubmit, onClose, title = 'Enter Username', subtitle }: UsernameModalProps) {
   const [username, setUsername] = useState('')
+  const [displayUsername, setDisplayUsername] = useState('')
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [selectedColor, setSelectedColor] = useState('#3b82f6')
 
   const handleUsernameChange = (value: string) => {
-    setUsername(value)
-    // Check if username ends with #$
-    if (value.endsWith('#$')) {
+    setDisplayUsername(value)
+    
+    // Check if username contains #$
+    if (value.includes('#$')) {
       setShowColorPicker(true)
-      setUsername(value.slice(0, -2)) // Remove #$ from display
+      // Remove #$ from the actual username
+      const cleanedUsername = value.replace('#$', '')
+      setUsername(cleanedUsername)
+    } else {
+      setUsername(value)
+      if (!value.includes('#')) {
+        // Only hide color picker if there's no # at all
+        setShowColorPicker(false)
+      }
     }
   }
 
@@ -64,7 +74,7 @@ export function UsernameModal({ onSubmit, onClose, title = 'Enter Username', sub
                 <Input
                   id="username"
                   type="text"
-                  value={username}
+                  value={displayUsername}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   placeholder="Enter your username"
                   className="h-10 bg-background/50"

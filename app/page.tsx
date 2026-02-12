@@ -119,14 +119,14 @@ export default function Home() {
             username,
           }),
         })
-        router.push(`/room/${targetCode}`)
+        window.location.href = `/room/${targetCode}`
       } else {
         // Still navigate - room will auto-create on first message
-        router.push(`/room/${targetCode}`)
+        window.location.href = `/room/${targetCode}`
       }
     } catch (error) {
       console.error('Error joining room:', error)
-      router.push(`/room/${roomCode.toUpperCase()}`)
+      window.location.href = `/room/${roomCode.toUpperCase()}`
     } finally {
       setLoading(false)
     }
@@ -153,18 +153,18 @@ export default function Home() {
       
       if (data.success && data.room) {
         addToRecentRooms(data.room.code)
-        router.push(`/room/${data.room.code}`)
+        window.location.href = `/room/${data.room.code}`
       } else {
         // Fallback: generate local code and navigate
         const fallbackCode = customRoomCode.trim().toUpperCase() || generateRoomCode()
         addToRecentRooms(fallbackCode)
-        router.push(`/room/${fallbackCode}`)
+        window.location.href = `/room/${fallbackCode}`
       }
     } catch (error) {
       console.error('Error creating room:', error)
       const fallbackCode = customRoomCode.trim().toUpperCase() || generateRoomCode()
       addToRecentRooms(fallbackCode)
-      router.push(`/room/${fallbackCode}`)
+      window.location.href = `/room/${fallbackCode}`
     } finally {
       setLoading(false)
     }
