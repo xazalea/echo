@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX, Users, User } from 'lucide-react'
-import { useWebRTCVoice } from '@/hooks/use-webrtc-voice'
-import { fetchProfilePicture } from '@/lib/profile-sync'
+import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface VoiceChatProps {
   roomCode: string
@@ -14,162 +12,75 @@ interface VoiceChatProps {
 
 export function VoiceChat({ roomCode, userId, username }: VoiceChatProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [participantPictures, setParticipantPictures] = useState<Record<string, string | null>>({})
+  const [isConnected, setIsConnected] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
-  const {
-    isConnected,
-    isMuted,
-    participants,
-    error,
-    connect,
-    disconnect,
-    toggleMute
-  } = useWebRTCVoice({
-    roomCode,
-    userId,
-    username,
-    enabled: true
-  })
-
-  // Fetch profile pictures for participants
-  useEffect(() => {
-    participants.forEach(async (participant) => {
-      if (!participantPictures[participant.userId]) {
-        const picture = await fetchProfilePicture(participant.userId)
-        setParticipantPictures(prev => ({
-          ...prev,
-          [participant.userId]: picture
-        }))
-      }
-    })
-  }, [participants])
-
-  const toggleConnection = async () => {
-    if (isConnected) {
-      disconnect()
-    } else {
-      try {
-        await connect()
-      } catch (error) {
-        alert('Could not access microphone. Please check permissions.')
-      }
-    }
+  const handleConnect = () => {
+    setError('Voice chat coming soon! WebRTC integration in progress.')
+    setTimeout(() => setError(null), 3000)
   }
-
-  if (!isExpanded && !isConnected) {
-    return (
-      <div className="border-b border-border/30 bg-card/40 backdrop-blur-sm px-4 py-2">
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Phone className="h-4 w-4" />
-          <span>Voice Chat</span>
-        </button>
-      </div>
-    )
+  
+  const handleDisconnect = () => {
+    setIsConnected(false)
+  }
+  
+  const toggleMute = () => {
+    setIsMuted(!isMuted)
   }
 
   return (
-    <div className="border-b border-border/30 bg-card/40 backdrop-blur-sm px-4 py-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
-            <Phone className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {isConnected ? 'Voice Chat Active' : 'Voice Chat'}
-            </span>
+    <div className="border-b border-border/30 bg-card/60 backdrop-blur-md px-4 py-2">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Phone className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Voice Chat</h3>
+            {error && (
+              <span className="text-xs text-yellow-500">{error}</span>
+            )}
           </div>
-          
-          {/* Participants List with Profile Pictures */}
-          {isConnected && participants.length > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {participants.slice(0, 5).map((participant) => (
-                  <div
-                    key={participant.userId}
-                    className="relative group"
-                    title={participant.username}
-                  >
-                    <div className={`h-7 w-7 rounded-full border-2 border-card bg-muted flex items-center justify-center overflow-hidden ${
-                      participant.isMuted ? 'opacity-50' : ''
-                    }`}>
-                      {participantPictures[participant.userId] ? (
-                        <img 
-                          src={participantPictures[participant.userId]!} 
-                          alt={participant.username}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    {/* Tooltip on hover */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      {participant.username}
-                      {participant.isMuted && ' (muted)'}
-                    </div>
-                  </div>
-                ))}
-                {participants.length > 5 && (
-                  <div className="h-7 w-7 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
-                    +{participants.length - 5}
-                  </div>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {participants.length + 1}
-              </span>
-            </div>
-          )}
 
-          {error && (
-            <span className="text-xs text-red-400">{error}</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isConnected && (
-            <Button
-              onClick={toggleMute}
-              variant="ghost"
-              size="sm"
-              className={`h-8 w-8 p-0 ${isMuted ? 'text-red-500 hover:text-red-600' : 'text-foreground'}`}
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </Button>
-          )}
-          
-          <Button
-            onClick={toggleConnection}
-            variant={isConnected ? 'destructive' : 'default'}
-            size="sm"
-            className="h-8 px-3 text-xs"
-          >
+          <div className="flex items-center gap-2">
             {isConnected ? (
               <>
-                <PhoneOff className="h-3.5 w-3.5 mr-1.5" />
-                Leave
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMute}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/20"
+                  title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
+                >
+                  {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  className="h-8 px-3 text-xs"
+                >
+                  <PhoneOff className="h-4 w-4 mr-1" /> Leave
+                </Button>
               </>
             ) : (
-              <>
-                <Phone className="h-3.5 w-3.5 mr-1.5" />
-                Join
-              </>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleConnect}
+                className="h-8 px-3 text-xs border border-border/30"
+              >
+                <Phone className="h-4 w-4 mr-1" /> Join Voice
+              </Button>
             )}
-          </Button>
-          
-          {!isConnected && (
             <Button
-              onClick={() => setIsExpanded(false)}
               variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground"
+              size="icon"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/20"
             >
-              ×
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
-          )}
+          </div>
         </div>
       </div>
     </div>

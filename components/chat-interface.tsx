@@ -271,7 +271,10 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
           ) : (
             messages.map((message: any, index: number) => {
               const parsed = parseMessage(message)
+              const isOwn = (message.user_id || message.userId) === userId
               const prevMessage = index > 0 ? messages[index - 1] : null
+              
+              // Show avatar if different user OR more than 5 minutes gap
               const showAvatar = !prevMessage || 
                 (prevMessage.user_id || prevMessage.userId) !== (message.user_id || message.userId) || 
                 (message.created_at && prevMessage.created_at && 
@@ -288,7 +291,7 @@ export const ChatInterface = forwardRef<any, ChatInterfaceProps>(function ChatIn
                     timestamp: new Date(message.created_at),
                     reactions: message.reactions || {},
                   }}
-                  isOwn={(message.user_id || message.userId) === userId}
+                  isOwn={isOwn}
                   onEdit={handleEditMessage}
                   onToggleClip={handleToggleClip}
                   onDelete={handleDeleteMessage}

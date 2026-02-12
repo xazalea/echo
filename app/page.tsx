@@ -28,13 +28,15 @@ export default function Home() {
     const storedUser = localStorage.getItem('echo_user')
     if (storedUser) {
       const { userId } = JSON.parse(storedUser)
-      import('@/lib/profile-sync').then(({ fetchProfilePicture }) => {
-        fetchProfilePicture(userId).then(picture => {
-          if (picture) {
-            setProfilePicture(picture)
+      fetch(`/api/profile-picture?userId=${userId}`)
+        .then(res => res.json())
+        .then((data) => {
+          const typedData = data as { success: boolean; picture?: { dataUrl: string } }
+          if (typedData.success && typedData.picture) {
+            setProfilePicture(typedData.picture.dataUrl)
           }
         })
-      })
+        .catch(error => console.error('Error fetching profile picture:', error))
     }
     
     // Load recent rooms
