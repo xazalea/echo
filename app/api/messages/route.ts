@@ -85,6 +85,12 @@ export async function POST(request: NextRequest) {
     // If AI is mentioned, generate a response using OpenRouter
     if (hasAIMention) {
       try {
+        // Show typing indicator for IsraelGPT
+        await db
+          .prepare('INSERT INTO typing_indicators (room_id, user_id, username, started_at) VALUES (?, ?, ?, ?) ON CONFLICT(room_id, user_id) DO UPDATE SET started_at = ?')
+          .bind(room.id, 'israelgpt', 'IsraelGPT 🇮🇱', Date.now(), Date.now())
+          .run()
+
         const cleanedContent = content.replace(/@israelgpt|@bigyahu|@ai|@assistant|@bot|@echo/gi, '').trim()
         
         const aiResponse = await fetch(OPENROUTER_API_URL, {
@@ -123,6 +129,12 @@ export async function POST(request: NextRequest) {
         }
         
         const responseText = aiData.choices?.[0]?.message?.content || 'I am here to help!'
+
+        // Remove typing indicator
+        await db
+          .prepare('DELETE FROM typing_indicators WHERE room_id = ? AND user_id = ?')
+          .bind(room.id, 'israelgpt')
+          .run()
 
         // Create AI response message
         const aiMessage = await createMessage(

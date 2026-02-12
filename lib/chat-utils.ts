@@ -177,8 +177,11 @@ export function getClippedMessages(): ClippedMessage[] {
 }
 
 export function removeClippedMessage(messageId: string): void {
+  console.log('[chat-utils] Removing clip:', messageId)
   const clips = getClippedMessages().filter(clip => clip.messageId !== messageId && clip.id !== messageId)
+  console.log('[chat-utils] Clips after removal:', clips.length)
   localStorage.setItem('echo_clips', JSON.stringify(clips))
+  console.log('[chat-utils] Removal saved to localStorage')
 }
 
 export function getClipByShareCode(shareCode: string): ClippedMessage | undefined {

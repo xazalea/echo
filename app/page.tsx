@@ -198,14 +198,16 @@ export default function Home() {
             {/* Echo Universal Room - Featured with Fancy Button */}
             <div className="relative flex justify-center">
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
                   addToRecentRooms('ECHO')
-                  if (!storedUser) {
+                  const user = localStorage.getItem('echo_user')
+                  if (!user) {
                     setUsernameModalCallback(() => (username: string) => {
                       const userId = generateUserId()
                       localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
                       setShowUsernameModal(false)
-                      router.push('/room/ECHO')
+                      setTimeout(() => router.push('/room/ECHO'), 100)
                     })
                     setShowUsernameModal(true)
                   } else {

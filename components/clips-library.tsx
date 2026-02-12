@@ -37,9 +37,14 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
 
   const handleRemoveClip = (messageId: string) => {
     console.log('[ClipsLibrary] Removing clip:', messageId)
-    const { removeClippedMessage } = require('@/lib/chat-utils')
-    removeClippedMessage(messageId)
-    setClips(clips.filter(clip => clip.id !== messageId && clip.messageId !== messageId))
+    // Import dynamically
+    import('@/lib/chat-utils').then(({ removeClippedMessage }) => {
+      removeClippedMessage(messageId)
+      // Update state after localStorage is updated
+      const updatedClips = clips.filter(clip => clip.id !== messageId && clip.messageId !== messageId)
+      setClips(updatedClips)
+      console.log('[ClipsLibrary] State updated, remaining clips:', updatedClips.length)
+    })
   }
 
   const handleCopyClip = async (clip: ClippedMessage) => {
@@ -183,62 +188,9 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
                     />
                   )}
 
-                  {/* Metadata - Court-Admissible Legal Evidence */}
-                  <div className="space-y-1.5 mb-2 p-2.5 rounded bg-muted/5 border border-border/10">
-                    <div className="text-[10px] text-muted-foreground/50 space-y-0.5">
-                      {/* Clip ID */}
-                      {clip.clipId && (
-                        <div className="flex justify-between pb-1 border-b border-border/10">
-                          <span className="font-semibold text-foreground/60">Clip ID:</span>
-                          <span className="font-mono text-primary/80 font-medium">{clip.clipId}</span>
-                        </div>
-                      )}
-                      
-                      {/* Timestamps */}
-                      <div className="flex justify-between">
-                        <span>Sent:</span>
-                        <span className="font-mono">{new Date(clip.timestamp).toLocaleString('en-US', { 
-                          year: 'numeric', month: '2-digit', day: '2-digit', 
-                          hour: '2-digit', minute: '2-digit', second: '2-digit', 
-                          timeZoneName: 'short' 
-                        })}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Clipped:</span>
-                        <span className="font-mono">{new Date(clip.clippedAt).toLocaleString('en-US', { 
-                          year: 'numeric', month: '2-digit', day: '2-digit', 
-                          hour: '2-digit', minute: '2-digit', second: '2-digit', 
-                          timeZoneName: 'short' 
-                        })}</span>
-                      </div>
-                      
-                      {/* User Info */}
-                      <div className="flex justify-between pt-1 border-t border-border/10">
-                        <span>Sender:</span>
-                        <span className="font-medium">{clip.username}</span>
-                      </div>
-                      {clip.clippedBy && (
-                        <div className="flex justify-between">
-                          <span>Clipped by:</span>
-                          <span className="font-medium">{clip.clippedBy}</span>
-                        </div>
-                      )}
-                      
-                      {/* Verification Hash */}
-                      {clip.verificationHash && (
-                        <div className="flex flex-col gap-0.5 pt-1 border-t border-border/10">
-                          <span className="font-semibold text-foreground/60">Verification Hash:</span>
-                          <span className="font-mono text-primary/70 text-[9px] break-all">{clip.verificationHash}</span>
-                        </div>
-                      )}
-                      
-                      {/* Legal Notice */}
-                      {clip.metadata?.legalNotice && (
-                        <div className="pt-1 border-t border-border/10 text-[9px] text-muted-foreground/40 italic">
-                          {clip.metadata.legalNotice}
-                        </div>
-                      )}
-                    </div>
+                  {/* Simple timestamp */}
+                  <div className="text-[10px] text-muted-foreground/40 mb-2">
+                    {new Date(clip.timestamp).toLocaleString()}
                   </div>
 
                   {/* Actions */}
