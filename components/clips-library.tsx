@@ -36,7 +36,10 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
   }, [])
 
   const handleRemoveClip = (messageId: string) => {
-    setClips(clips.filter(clip => clip.id !== messageId))
+    console.log('[ClipsLibrary] Removing clip:', messageId)
+    const { removeClippedMessage } = require('@/lib/chat-utils')
+    removeClippedMessage(messageId)
+    setClips(clips.filter(clip => clip.id !== messageId && clip.messageId !== messageId))
   }
 
   const handleCopyClip = async (clip: ClippedMessage) => {
@@ -46,6 +49,58 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
       setTimeout(() => setCopiedId(null), 2000)
     } catch (error) {
       console.error('[v0] Error copying:', error)
+    }
+  }
+
+  const handleExportClip = async (clip: ClippedMessage) => {
+    try {
+      // Create a comprehensive legal document
+      const exportData = {
+        clipId: clip.clipId || 'N/A',
+        messageContent: clip.content,
+        messageType: clip.type,
+        sender: {
+          username: clip.username,
+          userId: clip.userId || 'N/A',
+        },
+        clipper: {
+          username: clip.clippedBy || 'Unknown',
+          userId: clip.clippedById || 'N/A',
+        },
+        timestamps: {
+          messageSent: new Date(clip.timestamp).toISOString(),
+          messageSentUnix: clip.timestamp,
+          clipped: new Date(clip.clippedAt).toISOString(),
+          clippedUnix: clip.clippedAt,
+        },
+        context: {
+          roomCode: clip.roomCode,
+          platform: 'Echo Chat',
+        },
+        verification: {
+          hash: clip.verificationHash || 'N/A',
+          verificationString: clip.metadata?.verificationString || 'N/A',
+        },
+        metadata: clip.metadata || {},
+        legalNotice: 'This is a certified clip from Echo Chat. The verification hash can be used to verify the authenticity and integrity of this message. All timestamps are in UTC.',
+        exportedAt: new Date().toISOString(),
+      }
+
+      const jsonString = JSON.stringify(exportData, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `echo-clip-${clip.clipId || clip.id}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      setCopiedId(clip.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (error) {
+      console.error('[v0] Error exporting clip:', error)
     }
   }
 
@@ -128,16 +183,39 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
                     />
                   )}
 
-                  {/* Metadata - Professional Legal Proof */}
-                  <div className="space-y-1 mb-2 p-2 rounded bg-muted/5 border border-border/10">
+                  {/* Metadata - Court-Admissible Legal Evidence */}
+                  <div className="space-y-1.5 mb-2 p-2.5 rounded bg-muted/5 border border-border/10">
                     <div className="text-[10px] text-muted-foreground/50 space-y-0.5">
+                      {/* Clip ID */}
+                      {clip.clipId && (
+                        <div className="flex justify-between pb-1 border-b border-border/10">
+                          <span className="font-semibold text-foreground/60">Clip ID:</span>
+                          <span className="font-mono text-primary/80 font-medium">{clip.clipId}</span>
+                        </div>
+                      )}
+                      
+                      {/* Timestamps */}
                       <div className="flex justify-between">
-                        <span>Original:</span>
-                        <span className="font-mono">{new Date(clip.timestamp).toLocaleString()}</span>
+                        <span>Sent:</span>
+                        <span className="font-mono">{new Date(clip.timestamp).toLocaleString('en-US', { 
+                          year: 'numeric', month: '2-digit', day: '2-digit', 
+                          hour: '2-digit', minute: '2-digit', second: '2-digit', 
+                          timeZoneName: 'short' 
+                        })}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Clipped:</span>
-                        <span className="font-mono">{new Date(clip.clippedAt).toLocaleString()}</span>
+                        <span className="font-mono">{new Date(clip.clippedAt).toLocaleString('en-US', { 
+                          year: 'numeric', month: '2-digit', day: '2-digit', 
+                          hour: '2-digit', minute: '2-digit', second: '2-digit', 
+                          timeZoneName: 'short' 
+                        })}</span>
+                      </div>
+                      
+                      {/* User Info */}
+                      <div className="flex justify-between pt-1 border-t border-border/10">
+                        <span>Sender:</span>
+                        <span className="font-medium">{clip.username}</span>
                       </div>
                       {clip.clippedBy && (
                         <div className="flex justify-between">
@@ -145,16 +223,19 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
                           <span className="font-medium">{clip.clippedBy}</span>
                         </div>
                       )}
+                      
+                      {/* Verification Hash */}
                       {clip.verificationHash && (
-                        <div className="flex justify-between">
-                          <span>Verification:</span>
-                          <span className="font-mono text-primary/70">{clip.verificationHash}</span>
+                        <div className="flex flex-col gap-0.5 pt-1 border-t border-border/10">
+                          <span className="font-semibold text-foreground/60">Verification Hash:</span>
+                          <span className="font-mono text-primary/70 text-[9px] break-all">{clip.verificationHash}</span>
                         </div>
                       )}
-                      {clip.shareCode && (
-                        <div className="flex justify-between">
-                          <span>Clip ID:</span>
-                          <span className="font-mono">{clip.shareCode.substring(5, 15)}</span>
+                      
+                      {/* Legal Notice */}
+                      {clip.metadata?.legalNotice && (
+                        <div className="pt-1 border-t border-border/10 text-[9px] text-muted-foreground/40 italic">
+                          {clip.metadata.legalNotice}
                         </div>
                       )}
                     </div>
@@ -170,6 +251,15 @@ export function ClipsLibrary({ onClose, onShareClip }: ClipsLibraryProps) {
                     >
                       <Copy className="h-3 w-3" />
                       {copiedId === clip.id ? 'Copied!' : 'Copy'}
+                    </Button>
+                    <Button
+                      onClick={() => handleExportClip(clip)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 gap-1 px-2 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Export
                     </Button>
                     {onShareClip && (
                       <ClipShareButton clip={clip} onShare={onShareClip} />

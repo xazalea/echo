@@ -21,6 +21,7 @@ export default function Home() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [showUsernameModal, setShowUsernameModal] = useState(false)
   const [usernameModalCallback, setUsernameModalCallback] = useState<((username: string) => void) | null>(null)
+  const [recentRooms, setRecentRooms] = useState<string[]>([])
 
   useEffect(() => {
     // Load profile picture if user exists
@@ -34,6 +35,12 @@ export default function Home() {
           }
         })
       })
+    }
+    
+    // Load recent rooms
+    const recent = localStorage.getItem('echo_recent_rooms')
+    if (recent) {
+      setRecentRooms(JSON.parse(recent))
     }
   }, [])
 
@@ -59,6 +66,18 @@ export default function Home() {
     }
   }
 
+  const addToRecentRooms = (code: string) => {
+    const recent = localStorage.getItem('echo_recent_rooms')
+    const rooms = recent ? JSON.parse(recent) : []
+    if (!rooms.includes(code)) {
+      rooms.unshift(code)
+      // Keep only last 5 rooms
+      if (rooms.length > 5) rooms.pop()
+      localStorage.setItem('echo_recent_rooms', JSON.stringify(rooms))
+      setRecentRooms(rooms)
+    }
+  }
+
   const handleJoinRoom = async () => {
     if (!roomCode.trim() || !username.trim() || loading) return
     
@@ -77,20 +96,23 @@ export default function Home() {
       const response = await fetch(`/api/rooms?code=${roomCode.toUpperCase()}`)
       const data = await response.json() as { success: boolean; room?: { code: string }; error?: string }
 
+      const targetCode = roomCode.toUpperCase()
+      addToRecentRooms(targetCode)
+
       if (data.success) {
         await fetch('/api/join', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            roomCode: roomCode.toUpperCase(),
+            roomCode: targetCode,
             userId,
             username,
           }),
         })
-        router.push(`/room/${roomCode.toUpperCase()}`)
+        router.push(`/room/${targetCode}`)
       } else {
         // Still navigate - room will auto-create on first message
-        router.push(`/room/${roomCode.toUpperCase()}`)
+        router.push(`/room/${targetCode}`)
       }
     } catch (error) {
       console.error('Error joining room:', error)
@@ -120,15 +142,18 @@ export default function Home() {
       const data = await response.json() as { success: boolean; room?: { code: string }; error?: string }
       
       if (data.success && data.room) {
+        addToRecentRooms(data.room.code)
         router.push(`/room/${data.room.code}`)
       } else {
         // Fallback: generate local code and navigate
         const fallbackCode = customRoomCode.trim().toUpperCase() || generateRoomCode()
+        addToRecentRooms(fallbackCode)
         router.push(`/room/${fallbackCode}`)
       }
     } catch (error) {
       console.error('Error creating room:', error)
       const fallbackCode = customRoomCode.trim().toUpperCase() || generateRoomCode()
+      addToRecentRooms(fallbackCode)
       router.push(`/room/${fallbackCode}`)
     } finally {
       setLoading(false)
@@ -170,11 +195,11 @@ export default function Home() {
 
           {/* Actions */}
           <div className="space-y-3">
-            {/* Echo Universal Room - Featured */}
-            <div className="relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-lg blur opacity-75"></div>
+            {/* Echo Universal Room - Featured with Fancy Button */}
+            <div className="relative flex justify-center">
               <button
                 onClick={() => {
+                  addToRecentRooms('ECHO')
                   if (!storedUser) {
                     setUsernameModalCallback(() => (username: string) => {
                       const userId = generateUserId()
@@ -187,13 +212,18 @@ export default function Home() {
                     router.push('/room/ECHO')
                   }
                 }}
-                className="relative h-14 w-full rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 to-purple-500/10 text-foreground transition-all hover:border-primary/50 hover:from-primary/15 hover:to-purple-500/15 flex flex-col items-center justify-center gap-1 font-medium"
+                className="echo-fancy-button"
               >
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <span className="text-base">Join Echo</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground/60">Universal Chat Room</span>
+                <span className="echo-button-text">
+                  <span className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Join Echo
+                  </span>
+                </span>
+                <span className="echo-blob"></span>
+                <span className="echo-blob"></span>
+                <span className="echo-blob"></span>
+                <span className="echo-blob"></span>
               </button>
             </div>
             
@@ -214,6 +244,37 @@ export default function Home() {
               </button>
             </div>
           </div>
+
+          {/* Recent Rooms */}
+          {recentRooms.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-medium text-muted-foreground/60 px-1">Recent Rooms</h3>
+              <div className="flex flex-wrap gap-2">
+                {recentRooms.map((code) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      if (!storedUser) {
+                        setUsernameModalCallback(() => (username: string) => {
+                          const userId = generateUserId()
+                          localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
+                          setShowUsernameModal(false)
+                          router.push(`/room/${code}`)
+                        })
+                        setShowUsernameModal(true)
+                      } else {
+                        router.push(`/room/${code}`)
+                      }
+                    }}
+                    className="h-8 px-3 rounded-md border border-border/30 bg-card/30 text-foreground/80 hover:bg-card/50 hover:border-border/50 transition-all text-xs font-medium flex items-center gap-1.5"
+                  >
+                    {code === 'ECHO' && <Globe className="h-3 w-3 text-primary" />}
+                    {code}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="text-center text-[11px] text-muted-foreground/30 flex items-center justify-center gap-1.5">

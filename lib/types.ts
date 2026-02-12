@@ -42,17 +42,45 @@ export interface ClippedMessage {
   timestamp: number // Original message timestamp in milliseconds
   clippedAt: number // Exact timestamp when clipped
   clippedBy?: string // Username of who clipped it
+  clippedById?: string // User ID of who clipped it
   type: string
   imageUrl?: string
   shareCode?: string // For sharing
   verificationHash?: string // Legal proof hash
+  clipId?: string // Unique clip identifier
   metadata?: {
+    // Core message data
     messageId: string
     originalTimestamp: string
+    originalTimestampUnix: number
+    
+    // Clip data
     clippedTimestamp: string
+    clippedTimestampUnix: number
+    clipId: string
+    
+    // User data
+    senderUsername: string
+    senderUserId?: string
+    clipperUsername: string
+    clipperUserId: string
+    
+    // Context
     roomCode: string
+    messageType: string
+    
+    // Platform & Legal
     platform: string
     version: string
+    userAgent: string
+    timezone: string
+    
+    // Verification
+    verificationHash: string
+    verificationString: string
+    
+    // Legal disclaimer
+    legalNotice: string
   }
 }
 

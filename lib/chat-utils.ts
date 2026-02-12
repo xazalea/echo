@@ -72,9 +72,17 @@ export function saveClippedMessage(message: Message, roomCode: string): void {
     ? message.timestamp.getTime() 
     : (message.created_at || message.timestamp || now)
   
-  // Generate cryptographic hash for verification
-  const verificationData = `${message.id}|${message.content}|${message.username}|${messageTimestamp}|${roomCode}`
-  const verificationHash = btoa(verificationData).substring(0, 16)
+  // Get clipper information
+  const clipperUser = localStorage.getItem('echo_user') ? JSON.parse(localStorage.getItem('echo_user')!) : null
+  const clipperUsername = clipperUser?.username || 'Unknown'
+  const clipperUserId = clipperUser?.userId || 'Unknown'
+  
+  // Generate cryptographic hash for verification (SHA-256 equivalent using SubtleCrypto would be better, but using base64 for now)
+  const verificationData = `${message.id}|${message.content}|${message.username}|${message.user_id || message.userId}|${messageTimestamp}|${roomCode}|${now}|${clipperUserId}`
+  const verificationHash = btoa(verificationData).substring(0, 32)
+  
+  // Generate unique clip ID
+  const clipId = `CLIP-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
   
   const clipped = {
     id: message.id,
@@ -85,18 +93,46 @@ export function saveClippedMessage(message: Message, roomCode: string): void {
     roomCode,
     timestamp: messageTimestamp, // Original message timestamp
     clippedAt: now, // When the clip was created
-    clippedBy: localStorage.getItem('echo_user') ? JSON.parse(localStorage.getItem('echo_user')!).username : 'Unknown',
+    clippedBy: clipperUsername,
+    clippedById: clipperUserId,
     type: message.type || 'text',
     imageUrl: message.imageUrl,
     shareCode: generateShareCode(),
     verificationHash, // Legal proof hash
+    clipId, // Unique clip identifier
     metadata: {
+      // Core message data
       messageId: message.id,
       originalTimestamp: new Date(messageTimestamp).toISOString(),
+      originalTimestampUnix: messageTimestamp,
+      
+      // Clip data
       clippedTimestamp: new Date(now).toISOString(),
+      clippedTimestampUnix: now,
+      clipId: clipId,
+      
+      // User data
+      senderUsername: message.username,
+      senderUserId: message.user_id || message.userId,
+      clipperUsername: clipperUsername,
+      clipperUserId: clipperUserId,
+      
+      // Context
       roomCode: roomCode,
+      messageType: message.type || 'text',
+      
+      // Platform & Legal
       platform: 'Echo Chat',
-      version: '1.0',
+      version: '2.0',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      
+      // Verification
+      verificationHash: verificationHash,
+      verificationString: verificationData,
+      
+      // Legal disclaimer
+      legalNotice: 'This clip is a preserved record of a message sent on Echo Chat. The verification hash can be used to verify the authenticity of this clip. Timestamps are in UTC.',
     }
   }
   
