@@ -104,6 +104,17 @@ CREATE TABLE IF NOT EXISTS profile_pictures (
   updated_at INTEGER NOT NULL
 );
 
+-- WebRTC signaling for mesh network voice chat
+CREATE TABLE IF NOT EXISTS webrtc_signals (
+  id TEXT PRIMARY KEY,
+  room_code TEXT NOT NULL,
+  from_user_id TEXT NOT NULL,
+  to_user_id TEXT NOT NULL,
+  signal_type TEXT NOT NULL, -- 'offer', 'answer', 'ice-candidate', 'join', 'leave'
+  signal_data TEXT NOT NULL, -- JSON stringified data
+  created_at INTEGER NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);
@@ -112,6 +123,8 @@ CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
 CREATE INDEX IF NOT EXISTS idx_room_users_room_id ON room_users(room_id);
 CREATE INDEX IF NOT EXISTS idx_clips_user_id ON clips(user_id);
 CREATE INDEX IF NOT EXISTS idx_direct_messages_to_user ON direct_messages(to_user_id);
+CREATE INDEX IF NOT EXISTS idx_webrtc_signals_room ON webrtc_signals(room_code);
+CREATE INDEX IF NOT EXISTS idx_webrtc_signals_to_user ON webrtc_signals(to_user_id);
 
 -- Trigger to delete expired messages (simulated via cron job)
 -- Note: D1 doesn't support triggers, so we'll handle this in API

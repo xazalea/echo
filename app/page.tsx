@@ -200,8 +200,10 @@ export default function Home() {
             {/* Echo Universal Room - Featured with Fancy Button */}
             <div className="relative flex justify-center">
               <button
+                type="button"
                 onClick={(e) => {
                   e.preventDefault()
+                  e.stopPropagation()
                   addToRecentRooms('ECHO')
                   const user = localStorage.getItem('echo_user')
                   if (!user) {
@@ -209,11 +211,11 @@ export default function Home() {
                       const userId = generateUserId()
                       localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
                       setShowUsernameModal(false)
-                      setTimeout(() => router.push('/room/ECHO'), 100)
+                      window.location.href = '/room/ECHO'
                     })
                     setShowUsernameModal(true)
                   } else {
-                    router.push('/room/ECHO')
+                    window.location.href = '/room/ECHO'
                   }
                 }}
                 className="echo-fancy-button"
@@ -257,17 +259,21 @@ export default function Home() {
                 {recentRooms.map((code) => (
                   <button
                     key={code}
-                    onClick={() => {
-                      if (!storedUser) {
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      const user = localStorage.getItem('echo_user')
+                      if (!user) {
                         setUsernameModalCallback(() => (username: string) => {
                           const userId = generateUserId()
                           localStorage.setItem('echo_user', JSON.stringify({ userId, username }))
                           setShowUsernameModal(false)
-                          router.push(`/room/${code}`)
+                          window.location.href = `/room/${code}`
                         })
                         setShowUsernameModal(true)
                       } else {
-                        router.push(`/room/${code}`)
+                        window.location.href = `/room/${code}`
                       }
                     }}
                     className="h-8 px-3 rounded-md border border-border/30 bg-card/30 text-foreground/80 hover:bg-card/50 hover:border-border/50 transition-all text-xs font-medium flex items-center gap-1.5"
